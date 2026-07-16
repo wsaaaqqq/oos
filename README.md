@@ -36,15 +36,39 @@ esc quit                                             12 matches
 
 ## Install
 
+### Linux / macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wsaaaqqq/oos/master/install.sh | bash
+```
+
+### Windows (PowerShell)
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/wsaaaqqq/oos/master/install.ps1 | iex
+```
+
+### Alternative: go install
+
 ```bash
 go install github.com/wsaaaqqq/oos@latest
 ```
 
-Or build from source:
+### Build from source
 
 ```bash
 git clone https://github.com/wsaaaqqq/oos.git
 cd oos && go build -o oos .
+```
+
+### Uninstall
+
+```bash
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/wsaaaqqq/oos/master/uninstall.sh | bash
+
+# Windows
+iwr -useb https://raw.githubusercontent.com/wsaaaqqq/oos/master/uninstall.ps1 | iex
 ```
 
 ## Usage
