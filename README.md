@@ -23,9 +23,9 @@ OpenCode sessions pile up fast. With 400+ sessions, the built-in `opencode sessi
 ╭───────────────────────────────────────────────────────────────╮
 │ java spring !test                                   msgs ON   │
 ╰───────────────────────────────────────────────────────────────╯
-> C:/ws/java/sgsms-qx      │ Search the project for all control │ 16:32
-  !w/s/sgsms-tyzy/ext-app  │ 整理yjcrm项目...                   │ 15:20
-  C:/ws/java/sgsms-lp      │ unit test for GdController         │ 13:40
+> ~/projects/my-api         │ Add user authentication to Spring │ 16:32
+  !p/p/payment-service      │ Fix race condition in order flow  │ 15:20
+  ~/work/frontend-app       │ Optimize dashboard bundle size    │ 13:40
 ─────────────────────────────────────────────────────────────────
 esc quit                                             12 matches
 ```
