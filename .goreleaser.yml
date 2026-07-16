@@ -1,0 +1,62 @@
+project_name: oos
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: windows-amd64
+    goos: [windows]
+    goarch: [amd64]
+    binary: oos
+    ldflags:
+      - -s -w
+
+  - id: windows-arm64
+    goos: [windows]
+    goarch: [arm64]
+    binary: oos
+    ldflags:
+      - -s -w
+
+  - id: linux-amd64
+    goos: [linux]
+    goarch: [amd64]
+    binary: oos
+    ldflags:
+      - -s -w
+
+  - id: linux-arm64
+    goos: [linux]
+    goarch: [arm64]
+    binary: oos
+    ldflags:
+      - -s -w
+
+  - id: darwin-amd64
+    goos: [darwin]
+    goarch: [amd64]
+    binary: oos
+    ldflags:
+      - -s -w
+
+  - id: darwin-arm64
+    goos: [darwin]
+    goarch: [arm64]
+    binary: oos
+    ldflags:
+      - -s -w
+
+archives:
+  - format: binary
+    name_template: "oos_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

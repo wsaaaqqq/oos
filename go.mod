@@ -1,4 +1,4 @@
-module oos
+module github.com/wsaaaqqq/oos
 
 go 1.25.0
 
