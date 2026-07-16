@@ -388,7 +388,7 @@ func (m model) renderItemRow(s Session, selected bool, keywords []string) string
 	titleText := formatDir(s.Directory, colTitle)
 	titleText = highlightMatches(titleText, keywords, selected)
 
-	msgText := buildMsgColumn(s.FirstUserMsg, keywords)
+	msgText := buildMsgColumn(s.FirstUserMsg, m.allMsgs[s.ID], keywords)
 
 	timeText := formatTime(s.TimeUpdated)
 
@@ -422,7 +422,8 @@ func (m model) renderItemRow(s Session, selected bool, keywords []string) string
 	)
 }
 
-func buildMsgColumn(text string, keywords []string) string {
+func buildMsgColumn(firstMsg string, allMsgs []string, keywords []string) string {
+	text := findBestMsg(firstMsg, allMsgs, keywords)
 	if text == "" {
 		return ""
 	}
@@ -431,6 +432,31 @@ func buildMsgColumn(text string, keywords []string) string {
 	text = strings.ReplaceAll(text, "\t", " ")
 	snippet := ctxSnippet(text, keywords, colMsg)
 	return highlightMatches(snippet, keywords, false)
+}
+
+func findBestMsg(firstMsg string, allMsgs []string, keywords []string) string {
+	if len(keywords) == 0 {
+		return firstMsg
+	}
+	if keywordInText(firstMsg, keywords) {
+		return firstMsg
+	}
+	for _, m := range allMsgs {
+		if keywordInText(m, keywords) {
+			return m
+		}
+	}
+	return firstMsg
+}
+
+func keywordInText(text string, keywords []string) bool {
+	lower := strings.ToLower(text)
+	for _, kw := range keywords {
+		if strings.Contains(lower, kw) {
+			return true
+		}
+	}
+	return false
 }
 
 func ctxSnippet(text string, keywords []string, maxCols int) string {
