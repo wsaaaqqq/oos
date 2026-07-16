@@ -49,6 +49,7 @@ func loadSessionRows(db *sql.DB, sessions *[]Session) error {
 		SELECT s.id, s.title, s.slug, s.directory, s.model, s.agent, s.time_updated
 		FROM session s
 		WHERE s.time_archived IS NULL
+		  AND (s.parent_id IS NULL OR s.parent_id = '')
 		ORDER BY s.time_updated DESC
 	`)
 	if err != nil {
