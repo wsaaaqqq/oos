@@ -22,20 +22,22 @@ const (
 )
 
 type model struct {
-	textInput   textinput.Model
-	sessions    []Session
-	allMsgs     map[string][]string
-	filtered    []Session
-	cursor      int
-	scrollOff   int
-	searchMsgs  bool
-	loadingMsgs bool
-	ready       bool
-	selected    *Session
-	dbPath      string
-	width       int
-	height      int
-	err         error
+	textInput     textinput.Model
+	sessions      []Session
+	allMsgs       map[string][]string
+	filtered      []Session
+	cursor        int
+	scrollOff     int
+	searchMsgs    bool
+	loadingMsgs   bool
+	ready         bool
+	selected      *Session
+	confirmDelete bool
+	pendingDelID  string
+	dbPath        string
+	width         int
+	height        int
+	err           error
 }
 
 type sessionsLoadedMsg struct {
@@ -48,6 +50,10 @@ type msgsLoadedMsg struct {
 
 type dbErrMsg struct {
 	err error
+}
+
+type sessionDeletedMsg struct {
+	id string
 }
 
 func (m model) Init() tea.Cmd {
@@ -71,6 +77,16 @@ func loadAllMsgsCmd(dbPath string) tea.Cmd {
 			return dbErrMsg{err}
 		}
 		return msgsLoadedMsg{msgs}
+	}
+}
+
+func deleteSessionCmd(id string) tea.Cmd {
+	return func() tea.Msg {
+		cmd := exec.Command("opencode", "session", "delete", id)
+		cmd.Stdout = os.Stderr
+		cmd.Stderr = os.Stderr
+		_ = cmd.Run()
+		return sessionDeletedMsg{id: id}
 	}
 }
 
@@ -140,6 +156,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loadingMsgs = false
 		return m, nil
 
+	case sessionDeletedMsg:
+		for i, s := range m.sessions {
+			if s.ID == msg.id {
+				m.sessions = append(m.sessions[:i], m.sessions[i+1:]...)
+				break
+			}
+		}
+		m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
+		m.cursor = clampCursor(m.cursor, len(m.filtered))
+		m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
+		return m, nil
+
 	case tea.KeyMsg:
 		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 's' || msg.Runes[0] == 'S') {
 			if !m.loadingMsgs {
@@ -155,6 +183,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 'q' || msg.Runes[0] == 'Q') {
+			m.confirmDelete = false
 			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
 				dir := m.filtered[m.cursor].Directory
 				if len(dir) >= 2 && dir[1] == ':' {
@@ -166,6 +195,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
+		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 'd' || msg.Runes[0] == 'D') {
+			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
+				id := m.filtered[m.cursor].ID
+				if m.confirmDelete && m.pendingDelID == id {
+					m.confirmDelete = false
+					m.pendingDelID = ""
+					return m, deleteSessionCmd(id)
+				}
+				m.confirmDelete = true
+				m.pendingDelID = id
+			}
+			return m, nil
+		}
+		m.confirmDelete = false
+		m.pendingDelID = ""
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
@@ -512,8 +556,26 @@ func ctxSnippet(text string, keywords []string, maxCols int) string {
 }
 
 func (m model) renderStatusBar() string {
+	if m.confirmDelete {
+		title := ""
+		for _, s := range m.filtered {
+			if s.ID == m.pendingDelID {
+				title = s.Title
+				break
+			}
+		}
+		if len(title) > 30 {
+			title = title[:30]
+		}
+		msg := fmt.Sprintf("Delete \"%s\"? Press Alt+D again to confirm, any other key to cancel", title)
+		return lipgloss.NewStyle().
+			Width(m.width).
+			Foreground(lipgloss.Color("9")).
+			Render(truncateCols(msg, m.width))
+	}
+
 	count := fmt.Sprintf("%d matches", len(m.filtered))
-	keys := "Alt+Q copy dir  esc quit"
+	keys := "Alt+Q copy dir  Alt+D delete  esc quit"
 
 	countWidth := displayWidth(count) + 2
 	avail := m.width - countWidth
