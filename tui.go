@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -157,6 +158,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 'q' || msg.Runes[0] == 'Q') {
 			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
 				dir := m.filtered[m.cursor].Directory
+				if runtime.GOOS == "windows" {
+					dir = strings.ReplaceAll(dir, "/", "\\")
+				}
 				if err := clipboard.WriteAll(dir); err != nil {
 					m.err = fmt.Errorf("clipboard: %w", err)
 				}
