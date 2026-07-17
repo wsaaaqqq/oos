@@ -195,7 +195,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
-		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 'd' || msg.Runes[0] == 'D') {
+		if msg.Type == tea.KeyCtrlD {
 			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
 				id := m.filtered[m.cursor].ID
 				if m.confirmDelete && m.pendingDelID == id {
@@ -567,7 +567,7 @@ func (m model) renderStatusBar() string {
 		if len(title) > 30 {
 			title = title[:30]
 		}
-		msg := fmt.Sprintf("Delete \"%s\"? Press Alt+D again to confirm, any other key to cancel", title)
+		msg := fmt.Sprintf("Delete \"%s\"? Press Ctrl+D again to confirm, any other key to cancel", title)
 		return lipgloss.NewStyle().
 			Width(m.width).
 			Foreground(lipgloss.Color("9")).
@@ -575,7 +575,7 @@ func (m model) renderStatusBar() string {
 	}
 
 	count := fmt.Sprintf("%d matches", len(m.filtered))
-	keys := "Alt+Q copy dir  Alt+D delete  esc quit"
+	keys := "Alt+Q copy dir  Ctrl+D delete  esc quit"
 
 	countWidth := displayWidth(count) + 2
 	avail := m.width - countWidth
