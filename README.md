@@ -74,6 +74,8 @@ oos build !plan      # build sessions, excluding plan agent ones
 | `Enter` | `cd` to project dir + open session with `opencode -s <id>` |
 | `Alt+S` | toggle full-message search (ON by default) |
 | `Ctrl+W` | delete last keyword |
+| `Alt+Q` | copy project directory path to clipboard |
+| `Ctrl+D` | delete session (press twice to confirm) |
 | `Esc` | quit |
 
 ### Display Columns
