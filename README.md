@@ -36,32 +36,16 @@ esc quit                                             12 matches
 
 ## Install
 
-> Pre-built binaries: [GitHub Releases](https://github.com/wsaaaqqq/oos/releases) | [Gitee Releases（中国下载🚀）](https://gitee.com/haitao666/oos/releases)
+Download the binary for your platform, rename to `oos` (or `oos.exe` on Windows), and place it in a directory on your `PATH`.
 
-### Linux / macOS
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/wsaaaqqq/oos/master/install.sh | bash
-```
-
-### Windows (PowerShell)
-
-```powershell
-iwr -useb https://raw.githubusercontent.com/wsaaaqqq/oos/master/install.ps1 | iex
-```
-
-### Alternative: go install
-
-```bash
-go install github.com/wsaaaqqq/oos@latest
-```
-
-### Build from source
-
-```bash
-git clone https://github.com/wsaaaqqq/oos.git
-cd oos && go build -o oos .
-```
+| Platform | GitHub | Gitee（中国镜像） |
+|---|---|---|
+| Windows 64-bit | [oos_windows_amd64.exe](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_windows_amd64.exe) | [Gitee](https://gitee.com/haitao666/oos/releases) |
+| Windows ARM64 | [oos_windows_arm64.exe](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_windows_arm64.exe) | [Gitee](https://gitee.com/haitao666/oos/releases) |
+| Linux 64-bit | [oos_linux_amd64](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_linux_amd64) | [Gitee](https://gitee.com/haitao666/oos/releases) |
+| Linux ARM64 | [oos_linux_arm64](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_linux_arm64) | [Gitee](https://gitee.com/haitao666/oos/releases) |
+| macOS Intel | [oos_darwin_amd64](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_darwin_amd64) | [Gitee](https://gitee.com/haitao666/oos/releases) |
+| macOS Apple Silicon | [oos_darwin_arm64](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_darwin_arm64) | [Gitee](https://gitee.com/haitao666/oos/releases) |
 
 ### Uninstall
 
@@ -132,14 +116,3 @@ Reads `~/.local/share/opencode/opencode.db` (SQLite) — the same database OpenC
 
 - [OpenCode](https://opencode.ai) — the agentic coding tool this is built for
 - [opencode session list](https://opencode.ai/docs/cli#session) — built-in session list command
-
-## Manual Download
-
-| Platform | GitHub | Gitee（中国镜像） |
-|---|---|---|
-| Windows 64-bit | [oos_windows_amd64.exe](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_windows_amd64.exe) | [Gitee](https://gitee.com/haitao666/oos/releases) |
-| Windows ARM64 | [oos_windows_arm64.exe](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_windows_arm64.exe) | [Gitee](https://gitee.com/haitao666/oos/releases) |
-| Linux 64-bit | [oos_linux_amd64](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_linux_amd64) | [Gitee](https://gitee.com/haitao666/oos/releases) |
-| Linux ARM64 | [oos_linux_arm64](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_linux_arm64) | [Gitee](https://gitee.com/haitao666/oos/releases) |
-| macOS Intel | [oos_darwin_amd64](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_darwin_amd64) | [Gitee](https://gitee.com/haitao666/oos/releases) |
-| macOS Apple Silicon | [oos_darwin_arm64](https://github.com/wsaaaqqq/oos/releases/latest/download/oos_darwin_arm64) | [Gitee](https://gitee.com/haitao666/oos/releases) |
