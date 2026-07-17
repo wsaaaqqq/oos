@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -150,6 +151,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
 				m.cursor = clampCursor(m.cursor, len(m.filtered))
 				m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
+			}
+			return m, nil
+		}
+		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 'q' || msg.Runes[0] == 'Q') {
+			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
+				dir := m.filtered[m.cursor].Directory
+				if err := clipboard.WriteAll(dir); err != nil {
+					m.err = fmt.Errorf("clipboard: %w", err)
+				}
 			}
 			return m, nil
 		}
@@ -500,7 +510,7 @@ func ctxSnippet(text string, keywords []string, maxCols int) string {
 
 func (m model) renderStatusBar() string {
 	count := fmt.Sprintf("%d matches", len(m.filtered))
-	keys := "esc quit"
+	keys := "Alt+Q copy dir  esc quit"
 
 	countWidth := displayWidth(count) + 2
 	avail := m.width - countWidth
