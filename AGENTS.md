@@ -76,6 +76,29 @@ MSGS ON is default (`searchMsgs: true` in `initialModel`). On startup, sessions 
 - `PROMO.md` is promo copy for social platforms, not part of the tool
 - `scripts/sync-gitee.py` syncs binaries from GitHub release to Gitee, using `git credential fill` for token
 
+## Publishing to Gitee
+
+Two repos: GitHub (`wsaaaqqq/oos`) and Gitee (`haitao666/oos`). Code syncs automatically via Gitee import. Release binaries must be uploaded manually.
+
+Full release workflow:
+
+```bash
+# 1. Code is pushed to GitHub (already done)
+# 2. Tag and push to trigger GitHub Release
+git tag v1.0.2 && git push --tags
+# → .github/workflows/release.yml builds 6 platform binaries via GoReleaser
+
+# 3. Wait for GitHub Release to finish (~2 min)
+gh run watch
+
+# 4. Sync binaries to Gitee
+python scripts/sync-gitee.py --tag v1.0.2
+# → downloads all assets from GitHub Release, uploads to Gitee Release
+# → skips assets that already exist (idempotent)
+```
+
+Gitee token: stored in Windows Credential Manager (`git:https://gitee.com`), retrieved by `git credential fill` inside the script. No manual token config needed.
+
 ## Gotchas
 
 - `oos.exe` binary is NOT committed; `.gitignore` excludes `*.exe`
