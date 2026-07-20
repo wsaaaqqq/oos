@@ -16,7 +16,7 @@ func openSessionBg(s Session) error {
 
 	if _, err := exec.LookPath("wt"); err == nil {
 		cmd := exec.Command("wt", "nt", "-d", s.Directory, bin, "-s", s.ID)
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 		return cmd.Start()
 	}
 
