@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -217,7 +218,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
 				s := m.filtered[m.cursor]
-				_ = openSessionBg(s)
+				err := openSessionBg(s)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "oos: openSessionBg error: %v\n", err)
+				}
 			}
 			return m, nil
 
@@ -740,9 +744,9 @@ func openSessionBg(s Session) error {
 	}
 	cmd := exec.Command(bin, "-s", s.ID)
 	cmd.Dir = s.Directory
-	cmd.Stdin = nil
-	cmd.Stdout = nil
-	cmd.Stderr = nil
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: syscall.CREATE_NEW_CONSOLE,
+	}
 	return cmd.Start()
 }
 
