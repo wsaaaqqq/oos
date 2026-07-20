@@ -742,11 +742,8 @@ func openSessionBg(s Session) error {
 	if err != nil {
 		return fmt.Errorf("opencode not found: %w", err)
 	}
-	cmd := exec.Command(bin, "-s", s.ID)
-	cmd.Dir = s.Directory
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		CreationFlags: 0x00000010,
-	}
+	cmd := exec.Command("wt", "nt", "-d", s.Directory, bin, "-s", s.ID)
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 	return cmd.Start()
 }
 
