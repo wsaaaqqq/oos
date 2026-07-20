@@ -745,7 +745,7 @@ func openSessionBg(s Session) error {
 	cmd := exec.Command(bin, "-s", s.ID)
 	cmd.Dir = s.Directory
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		CreationFlags: syscall.CREATE_NEW_CONSOLE,
+		CreationFlags: 0x00000010,
 	}
 	return cmd.Start()
 }
