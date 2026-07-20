@@ -20,8 +20,7 @@ func openSessionBg(s Session) error {
 		return cmd.Start()
 	}
 
-	cmd := exec.Command(bin, "-s", s.ID)
+	cmd := exec.Command("cmd", "/c", "start", "", bin, "-s", s.ID)
 	cmd.Dir = s.Directory
-	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x00000010}
 	return cmd.Start()
 }
