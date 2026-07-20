@@ -10,7 +10,7 @@ Repository: https://github.com/wsaaaqqq/oos
 ## One-liner (通用)
 
 ```
-oos — OpenCode 会话的 fzf 替代品。输入关键字实时模糊搜索 400+ 历史会话，回车即恢复项目上下文。Go + TUI，零配置，一条命令安装。
+oos — 跨所有项目的 OpenCode 会话搜索引擎。输入关键字，瞬间定位到你要找的对话，回车继续。Go TUI，零配置，一条命令安装。
 ```
 
 ---
@@ -19,14 +19,14 @@ oos — OpenCode 会话的 fzf 替代品。输入关键字实时模糊搜索 400
 
 | 平台 | 标题 | 描述 |
 |---|---|---|
-| **V2EX** | 为 OpenCode 写了个 terminal 会话模糊搜索工具 oos | OpenCode 用久了会话堆积 400+，内置的 list 只能翻页不能搜。用 Go + bubbletea 写了个 TUI 工具，输入关键字实时过滤，回车直接打开指定会话。支持多关键字 AND 逻辑 + `!` 排除，目录列自动缩略，消息列上下文匹配。MIT 开源，一条脚本安装。 |
-| **Hacker News** | Show HN: Oos — a fuzzy TUI session finder for OpenCode | I built a terminal fuzzy finder for my OpenCode sessions. 400+ sessions, built-in list is scroll-only. oos is a Go TUI that loads the local SQLite db, filters in-memory on every keystroke, and restores any session with Enter. 3-column layout: project dir (auto-truncated) / user question (context-matched) / timestamp. MIT, one-liner install. |
-| **Reddit /r/golang** | oos — TUI fuzzy session finder for OpenCode (Go + bubbletea) | Wrote a Go TUI tool to search OpenCode sessions by keyword. Uses bubbletea + lipgloss for the UI, modernc.org/sqlite (pure Go, no CGO) to read the local session DB. Real-time in-memory filtering, multi-keyword AND + `!` exclusion, context-centered message snippets. MIT, one-liner install scripts for all platforms. |
-| **Reddit /r/commandline** | oos — replace `opencode session list` with a fuzzy TUI finder | If you use OpenCode and have 400+ sessions, this is for you. Terminal fuzzy finder with real-time keyword search, Enter to open. 24/56/11 column layout, directory auto-abbreviation, `!` to exclude. Works on Windows/Linux/macOS. |
-| **抖音** | 开源了一个 OpenCode 的黑科技搜索工具 | 敲代码神器！OpenCode 会话太多找不到？我写了个 oos，输入关键词一秒搜索，回车直接打开历史项目。全终端显示，三列布局，自动目录缩写。GitHub 开源，一行命令安装，Windows/Mac/Linux 都能用。#开源 #程序员 #效率工具 |
-| **小红书** | 开源分享｜一个OpenCode用户的效率工具 oos | 🛠️ 折腾了一个终端工具 oos。OpenCode 用久了会话太多，每次找之前的会话都要翻半天。干脆自己写了个 TUI 模糊搜索，输入关键词实时过滤，回车直接打开对应会话。Go 写的，三列展示项目目录+用户提问+时间，安装就一行命令。GitHub 开源✨ |
-| **Twitter/X** | oos — OpenCode session fuzzy finder | Type, filter, Enter. 400+ sessions in milliseconds. Go TUI, one-liner install. github.com/wsaaaqqq/oos #golang #opencode #cli #tui |
-| **掘金** | 我给 OpenCode 写了个 TUI 会话搜索工具 | 使用 OpenCode 一段时间后，会话列表越来越长，内置的 session list 只有翻页功能。我花了半天用 Go + bubbletea 写了个 TUI 工具 oos，解决这个痛点。文章包含了设计思路、数据库查询优化、TUI 列布局实现。 |
+| **V2EX** | OpenCode 会话太多找不到？跨项目全局搜索工具 oos | 几十个项目几百条会话，想不起在哪个项目里聊过哪个话题？oos 跨所有项目搜索全部会话，输入关键字瞬间定位，回车直接继续对话。支持多关键字 AND 逻辑 + `!` 排除，智能消息匹配，目录自动缩略。MIT 开源，一条脚本安装。 |
+| **Hacker News** | Show HN: oos — search all OpenCode sessions across all projects at once | You have 400+ sessions scattered across 50+ projects. Which project was that bug discussion in? oos reads your local SQLite db and searches every session from every project in one TUI. Type, find, Enter — back to work. Cross-project global search, real-time filtering, best-match from full history, pure Go single binary. MIT, one-liner install. |
+| **Reddit /r/golang** | oos — cross-project session search for OpenCode (Go + bubbletea) | Got 50+ projects and 400+ OpenCode sessions? oos searches across all sessions from all projects at once — type a keyword, find it instantly, press Enter to resume. Cross-project global search, real-time filtering, full-history best-match. MIT, one-liner install. |
+| **Reddit /r/commandline** | oos — search all OpenCode sessions across all projects at once | If you use OpenCode across many projects, you know the pain — sessions pile up and `session list` doesn't search. oos reads your local SQLite db and lets you search every session from every project. Type a keyword, find the right conversation, Enter to resume. Cross-project global search, real-time filtering. Works on Windows/Linux/macOS. |
+| **抖音** | OpenCode 用户必备：跨项目秒搜全部会话 | 几十个项目几百个会话，想找上次聊的 bug——忘了在哪个项目里？oos 一条命令，跨所有项目搜索全文，输关键词秒定位，回车继续对话。全终端，零配置，一行安装。#开源 #程序员 #效率工具 |
+| **小红书** | 开源分享｜OpenCode用户的必备效率工具 oos | 🛠️ 用 OpenCode 写代码久了，会话太多找不到之前的对话？写了 oos——跨所有项目搜索全部会话，输关键词秒定位，回车直接继续聊。Go TUI，三列展示项目目录+匹配消息+时间，一行命令安装。GitHub 开源✨ |
+| **Twitter/X** | oos — search all your OpenCode sessions across all projects | Type, filter, Enter. 400+ sessions across 50+ projects in milliseconds. Cross-project global search, Go TUI, one-liner install. github.com/wsaaaqqq/oos #golang #opencode #cli #tui |
+| **掘金** | OpenCode 会话太多找不到？我写了 oos 一行命令搞定 | 面对几百条分散在几十个项目里的会话，如何快速找回三周前和 AI 的某次对话？用 Go + bubbletea 写了个 TUI 工具 oos，跨项目全局搜索，输关键字瞬间定位，回车继续对话。 |
 
 ---
 

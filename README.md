@@ -1,6 +1,6 @@
 # oos — OpenCode Session Finder
 
-> TUI interactive fuzzy finder for [OpenCode](https://opencode.ai) sessions. Find any session instantly and restore your workflow with one keystroke.
+> TUI interactive fuzzy finder for [OpenCode](https://opencode.ai) sessions. Search across all sessions from all projects at once — find any conversation by keyword and resume instantly.
 
 <p align="center">
   <img src="https://img.shields.io/badge/go-%2300ADD8.svg?style=flat&logo=go&logoColor=white">
@@ -10,27 +10,29 @@
 
 ## Why
 
-OpenCode sessions pile up fast. With 400+ sessions, the built-in `opencode session list` becomes a scrolling nightmare. `oos` gives you a real-time TUI fuzzy search — type a keyword, see matching sessions instantly, press Enter to jump right back in.
+You discussed a bug fix three weeks ago across three different projects. Which session was it in? You'd have to open each project and scroll through `opencode session list` one by one.
+
+`oos` solves this: it reads your local OpenCode database and lets you search **across all sessions from all projects** at once. Type a keyword, see matches instantly, press Enter to continue the conversation right where you left off.
 
 ```
-🥲 Before: scroll through 400+ sessions
-😎 After:  oos key1 key2 → Enter → back to work
+🥲 Before: open project → session list → scroll → wrong project → repeat
+😎 After:  oos "bug fix" → Enter → right back to the conversation
 ```
 
 ## Demo
 
 ```
 ╭───────────────────────────────────────────────────────────────╮
-│ java spring !test                                   msgs ON   │
+│ bug fix                                              msgs ON   │
 ╰───────────────────────────────────────────────────────────────╯
-> ~/projects/my-api         │ Add user authentication to Spring │ 16:32
-  !p/p/payment-service      │ Fix race condition in order flow  │ 15:20
-  ~/work/frontend-app       │ Optimize dashboard bundle size    │ 13:40
+> !p/my-api                 │ 帮我修复登录页面的 bug     │ 07-14 16:32
+  !p/payment-service        │ Fix race condition in order       │ 07-13 15:20
+  !w/frontend-app           │ 这个 bug 怎么定位的        │ 07-10 13:40
 ─────────────────────────────────────────────────────────────────
-esc quit                                             12 matches
+type to search  enter: resume  esc: quit              3 matches
 ```
 
-- **3 columns**: project directory | user question (context-matched) | timestamp
+- **3 columns**: project directory | best matching message (context-matched) | timestamp
 - **Real-time filter**: every keystroke instantly updates results
 - **`!` marker**: directory path truncated → `!` indicates more parents above
 
@@ -60,10 +62,14 @@ iwr -useb https://raw.githubusercontent.com/wsaaaqqq/oos/master/uninstall.ps1 | 
 ## Usage
 
 ```bash
-oos                  # list all sessions
+oos                  # search all sessions across all projects
 oos java spring      # sessions matching both "java" AND "spring"
-oos build !plan      # build sessions, excluding plan agent ones
+oos bug fix !plan    # find bug fix sessions, exclude plan agent
 ```
+
+Type a keyword, see matching sessions from all projects instantly. `↑` / `↓` to pick the session, `Enter` to open and continue the conversation.
+
+`Alt+Q` copy project path  ·  `Ctrl+D` twice to delete  ·  `Esc` quit
 
 ### Keyboard Shortcuts
 
@@ -83,7 +89,7 @@ oos build !plan      # build sessions, excluding plan agent ones
 | Column | Width | Description |
 |---|---|---|
 | Project dir | 24 cols | leaf dir in full, parents abbreviated to first char, `!` marks truncation |
-| User question | 56 cols | context-centered on first keyword match, hard-cut at boundary |
+| Matching message | 56 cols | best match from all messages (keyword-centered), hard-cut at boundary |
 | Timestamp | 11 cols | `HH:MM` (today) or `MM-DD HH:MM` (older) |
 
 ## Search Modes

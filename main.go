@@ -15,17 +15,17 @@ func main() {
 
 	initialQuery := strings.Join(os.Args[1:], " ")
 
-	session, err := runTUI(db, initialQuery)
+	sessions, err := runTUI(db, initialQuery)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	if session == nil {
+	if len(sessions) == 0 {
 		return
 	}
 
-	if err := openSession(*session); err != nil {
+	if err := openSessions(sessions); err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening session: %v\n", err)
 		os.Exit(1)
 	}

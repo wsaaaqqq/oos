@@ -1,6 +1,6 @@
 # AGENTS.md — oos
 
-Single-binary Go TUI for fuzzy-searching OpenCode sessions.
+Single-binary Go TUI to search across all OpenCode sessions from all projects at once — find any session by keyword and resume the conversation instantly.
 
 ## Commands
 
