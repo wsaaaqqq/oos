@@ -70,6 +70,20 @@ MSGS ON is default (`searchMsgs: true` in `initialModel`). On startup, sessions 
 
 ## Release
 
+Do NOT tag or publish unless the user explicitly says "发版", "发布", "release", or similar.
+
+### Versioning
+
+`v<major>.<minor>.<bugfix>`
+
+| bump | trigger | example |
+|---|---|---|
+| major | breaking changes / major feature overhaul | TUI rewrite |
+| minor | new features / functional improvements | new shortcut, Enter-keep-open |
+| bugfix | bug fixes only | cross-compile fix, fallback fix |
+
+### Workflow
+
 - `.goreleaser.yml` produces 6 binaries (windows/linux/darwin × amd64/arm64) as raw binaries (no archive, no zip)
 - CI: `ci.yml` runs on push/PR to master, just `go build` + `go vet`
 - Release: `release.yml` triggered by `v*` tag push, uses GoReleaser
