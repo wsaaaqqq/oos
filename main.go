@@ -6,7 +6,20 @@ import (
 	"strings"
 )
 
+var version = "dev"
+
 func main() {
+	if len(os.Args) >= 2 {
+		switch os.Args[1] {
+		case "-v", "--version":
+			showVersion()
+			return
+		case "--upgrade":
+			doUpgrade()
+			return
+		}
+	}
+
 	db := dbPath()
 	if _, err := os.Stat(db); os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "Database not found: %s\n", db)

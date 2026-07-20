@@ -10,42 +10,42 @@ builds:
     goarch: [amd64]
     binary: oos
     ldflags:
-      - -s -w
+      - -s -w -X main.version={{.Version}}
 
   - id: windows-arm64
     goos: [windows]
     goarch: [arm64]
     binary: oos
     ldflags:
-      - -s -w
+      - -s -w -X main.version={{.Version}}
 
   - id: linux-amd64
     goos: [linux]
     goarch: [amd64]
     binary: oos
     ldflags:
-      - -s -w
+      - -s -w -X main.version={{.Version}}
 
   - id: linux-arm64
     goos: [linux]
     goarch: [arm64]
     binary: oos
     ldflags:
-      - -s -w
+      - -s -w -X main.version={{.Version}}
 
   - id: darwin-amd64
     goos: [darwin]
     goarch: [amd64]
     binary: oos
     ldflags:
-      - -s -w
+      - -s -w -X main.version={{.Version}}
 
   - id: darwin-arm64
     goos: [darwin]
     goarch: [arm64]
     binary: oos
     ldflags:
-      - -s -w
+      - -s -w -X main.version={{.Version}}
 
 archives:
   - format: binary
