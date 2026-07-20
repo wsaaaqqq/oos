@@ -39,15 +39,21 @@ func showVersion() {
 	fmt.Println("oos", version)
 }
 
-func doUpgrade() {
+func doUpgrade(tag string) {
 	current := strings.TrimPrefix(version, "v")
 	fmt.Printf("Current: %s\n\n", version)
 
 	fetchTimeout := 15 * time.Second
 	ch := make(chan *releaseInfo, 2)
 
-	go func() { r, _ := fetchFromGitHub(fetchTimeout); ch <- r }()
-	go func() { r, _ := fetchFromGitee(fetchTimeout); ch <- r }()
+	if tag != "" {
+		tag = strings.TrimPrefix(tag, "v")
+		go func() { r, _ := fetchReleaseFromGitHub(tag, fetchTimeout); ch <- r }()
+		go func() { r, _ := fetchReleaseFromGitee(tag, fetchTimeout); ch <- r }()
+	} else {
+		go func() { r, _ := fetchLatestFromGitHub(fetchTimeout); ch <- r }()
+		go func() { r, _ := fetchLatestFromGitee(fetchTimeout); ch <- r }()
+	}
 
 	var best *releaseInfo
 	for i := 0; i < 2; i++ {
@@ -69,13 +75,16 @@ func doUpgrade() {
 		os.Exit(1)
 	}
 
-	latest := strings.TrimPrefix(best.Tag, "v")
-	if current != "dev" && compareVersion(latest, current) <= 0 {
-		fmt.Printf("Already up to date (%s)\n", best.Tag)
-		os.Exit(0)
+	if tag != "" {
+		fmt.Printf("Target:  %s\n", best.Tag)
+	} else {
+		latest := strings.TrimPrefix(best.Tag, "v")
+		if current != "dev" && compareVersion(latest, current) <= 0 {
+			fmt.Printf("Already up to date (%s)\n", best.Tag)
+			os.Exit(0)
+		}
+		fmt.Printf("Latest:  %s\n", best.Tag)
 	}
-
-	fmt.Printf("Latest:  %s\n", best.Tag)
 
 	asset := findAsset(best)
 	if asset == nil {
@@ -91,8 +100,15 @@ func doUpgrade() {
 	fmt.Printf("Upgraded to %s\n", best.Tag)
 }
 
-func fetchFromGitHub(timeout time.Duration) (*releaseInfo, error) {
+func fetchLatestFromGitHub(timeout time.Duration) (*releaseInfo, error) {
+	return fetchReleaseFromGitHub("", timeout)
+}
+
+func fetchReleaseFromGitHub(tag string, timeout time.Duration) (*releaseInfo, error) {
 	url := "https://api.github.com/repos/wsaaaqqq/oos/releases/latest"
+	if tag != "" {
+		url = "https://api.github.com/repos/wsaaaqqq/oos/releases/tags/v" + tag
+	}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "oos-upgrader")
@@ -111,8 +127,15 @@ func fetchFromGitHub(timeout time.Duration) (*releaseInfo, error) {
 	return &r, nil
 }
 
-func fetchFromGitee(timeout time.Duration) (*releaseInfo, error) {
+func fetchLatestFromGitee(timeout time.Duration) (*releaseInfo, error) {
+	return fetchReleaseFromGitee("", timeout)
+}
+
+func fetchReleaseFromGitee(tag string, timeout time.Duration) (*releaseInfo, error) {
 	url := "https://gitee.com/api/v5/repos/haitao666/oos/releases/latest"
+	if tag != "" {
+		url = "https://gitee.com/api/v5/repos/haitao666/oos/releases/tags/v" + tag
+	}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "oos-upgrader")
 

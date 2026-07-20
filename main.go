@@ -15,7 +15,11 @@ func main() {
 			showVersion()
 			return
 		case "--upgrade":
-			doUpgrade()
+			tag := ""
+			if len(os.Args) >= 3 {
+				tag = os.Args[2]
+			}
+			doUpgrade(tag)
 			return
 		}
 	}
