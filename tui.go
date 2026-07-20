@@ -31,10 +31,7 @@ type model struct {
 	searchMsgs    bool
 	loadingMsgs   bool
 	ready         bool
-	choose        *Session
-	sel           map[int]bool
-	visual        bool
-	anchor        int
+	selected      *Session
 	confirmDelete bool
 	pendingDelID  string
 	dbPath        string
@@ -107,7 +104,6 @@ func initialModel(dbPath string, initialQuery string) model {
 		cursor:     0,
 		scrollOff:  0,
 		searchMsgs: true,
-		sel:        make(map[int]bool),
 		dbPath:     dbPath,
 		width:      80,
 		height:     24,
@@ -119,18 +115,6 @@ func (m model) msgMap() map[string][]string {
 		return m.allMsgs
 	}
 	return nil
-}
-
-func (m model) selectedCount() int {
-	return len(m.sel)
-}
-
-func (m model) selectedIndices() []int {
-	var r []int
-	for i := range m.sel {
-		r = append(r, i)
-	}
-	return r
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -179,7 +163,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 		}
-		delete(m.sel, m.cursor)
 		m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
 		m.cursor = clampCursor(m.cursor, len(m.filtered))
 		m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
@@ -225,64 +208,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
-
-		if msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && (msg.Runes[0] == 'v' || msg.Runes[0] == 'V') {
-			m.confirmDelete = false
-			m.pendingDelID = ""
-			if m.visual {
-				m.visual = false
-			} else if len(m.filtered) > 0 {
-				m.visual = true
-				m.anchor = m.cursor
-				m.sel = make(map[int]bool)
-				m.sel[m.cursor] = true
-			}
-			return m, nil
-		}
-
 		m.confirmDelete = false
 		m.pendingDelID = ""
 		switch msg.Type {
-		case tea.KeyCtrlC:
-			return m, tea.Quit
-
-		case tea.KeyEsc:
-			if m.visual || len(m.sel) > 0 {
-				m.visual = false
-				m.sel = make(map[int]bool)
-				return m, nil
-			}
+		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
 
 		case tea.KeyEnter:
-			return m.exitSelected()
+			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
+				s := m.filtered[m.cursor]
+				_ = openSessionBg(s)
+			}
+			return m, nil
 
 		case tea.KeyUp:
-			if m.visual {
-				if m.cursor > 0 {
-					m.cursor--
-				}
-				m.selectRange()
-			} else {
-				m.sel = make(map[int]bool)
-				if m.cursor > 0 {
-					m.cursor--
-				}
+			if m.cursor > 0 {
+				m.cursor--
 			}
 			m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
 			return m, nil
 
 		case tea.KeyDown:
-			if m.visual {
-				if m.cursor < len(m.filtered)-1 {
-					m.cursor++
-				}
-				m.selectRange()
-			} else {
-				m.sel = make(map[int]bool)
-				if m.cursor < len(m.filtered)-1 {
-					m.cursor++
-				}
+			if m.cursor < len(m.filtered)-1 {
+				m.cursor++
 			}
 			m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
 			return m, nil
@@ -290,42 +238,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyPgUp:
 			page := m.visibleSlots()
 			m.cursor = max(0, m.cursor-page)
-			if m.visual {
-				m.selectRange()
-			} else {
-				m.sel = make(map[int]bool)
-			}
 			m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
 			return m, nil
 
 		case tea.KeyPgDown:
 			page := m.visibleSlots()
 			m.cursor = min(len(m.filtered)-1, m.cursor+page)
-			if m.visual {
-				m.selectRange()
-			} else {
-				m.sel = make(map[int]bool)
-			}
 			m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
 			return m, nil
 
 		case tea.KeyHome:
 			m.cursor = 0
 			m.scrollOff = 0
-			if m.visual {
-				m.selectRange()
-			} else {
-				m.sel = make(map[int]bool)
-			}
 			return m, nil
 
 		case tea.KeyEnd:
 			m.cursor = max(0, len(m.filtered)-1)
-			if m.visual {
-				m.selectRange()
-			} else {
-				m.sel = make(map[int]bool)
-			}
 			m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
 			return m, nil
 
@@ -354,47 +282,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
-}
-
-func (m *model) selectRange() {
-	m.sel = make(map[int]bool)
-	a, c := m.anchor, m.cursor
-	if a > c {
-		a, c = c, a
-	}
-	for i := a; i <= c; i++ {
-		m.sel[i] = true
-	}
-}
-
-func (m model) exitSelected() (tea.Model, tea.Cmd) {
-	if len(m.filtered) == 0 {
-		return m, nil
-	}
-	if len(m.sel) == 0 {
-		m.choose = &m.filtered[m.cursor]
-		return m, tea.Quit
-	}
-	return m, nil
-}
-
-func (m model) GetSelectedSessions() []Session {
-	if m.choose != nil {
-		return []Session{*m.choose}
-	}
-	if len(m.sel) > 0 {
-		var result []Session
-		for i := range m.sel {
-			if i < len(m.filtered) {
-				result = append(result, m.filtered[i])
-			}
-		}
-		return result
-	}
-	if m.cursor < len(m.filtered) {
-		return []Session{m.filtered[m.cursor]}
-	}
-	return nil
 }
 
 func (m model) visibleSlots() int {
@@ -445,9 +332,6 @@ func (m model) renderSearchBar() string {
 	if m.loadingMsgs {
 		msgsTag = "msgs ..."
 	}
-	if m.visual {
-		msgsTag = "VISUAL"
-	}
 
 	searchStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -494,9 +378,8 @@ func (m model) renderResults() string {
 	filter := ParseKeys(m.textInput.Value())
 	var lines []string
 	for i := start; i < end; i++ {
-		isCursor := i == m.cursor
-		inSel := m.sel[i]
-		lines = append(lines, m.renderItemRow(m.filtered[i], isCursor, inSel, filter.Include))
+		isSelected := i == m.cursor
+		lines = append(lines, m.renderItemRow(m.filtered[i], isSelected, filter.Include))
 	}
 
 	boxH := m.height - 5
@@ -553,14 +436,14 @@ func formatDir(dir string, maxCols int) string {
 	return "!" + result
 }
 
-func (m model) renderItemRow(s Session, isCursor, inSel bool, keywords []string) string {
+func (m model) renderItemRow(s Session, selected bool, keywords []string) string {
 	cursor := "  "
-	if isCursor {
+	if selected {
 		cursor = "> "
 	}
 
 	titleText := formatDir(s.Directory, colTitle)
-	titleText = highlightMatches(titleText, keywords, isCursor || inSel)
+	titleText = highlightMatches(titleText, keywords, selected)
 
 	msgText := buildMsgColumn(s.FirstUserMsg, m.allMsgs[s.ID], keywords)
 
@@ -568,7 +451,6 @@ func (m model) renderItemRow(s Session, isCursor, inSel bool, keywords []string)
 
 	selBg := lipgloss.Color("12")
 	selFg := lipgloss.Color("0")
-	multiBg := lipgloss.Color("2")
 	normFg := lipgloss.Color("243")
 
 	titleStyle := lipgloss.NewStyle().Width(colTitle + 2)
@@ -576,16 +458,11 @@ func (m model) renderItemRow(s Session, isCursor, inSel bool, keywords []string)
 	msgStyle := lipgloss.NewStyle().Width(colMsg)
 	timeStyle := lipgloss.NewStyle().Width(colTime).Align(lipgloss.Right)
 
-	if isCursor {
+	if selected {
 		titleStyle = titleStyle.Background(selBg).Foreground(selFg).Bold(true)
 		sepStyle = sepStyle.Background(selBg).Foreground(selFg)
 		msgStyle = msgStyle.Background(selBg).Foreground(selFg)
 		timeStyle = timeStyle.Background(selBg).Foreground(selFg)
-	} else if inSel {
-		titleStyle = titleStyle.Background(multiBg).Foreground(selFg)
-		sepStyle = sepStyle.Background(multiBg).Foreground(selFg)
-		msgStyle = msgStyle.Background(multiBg).Foreground(selFg)
-		timeStyle = timeStyle.Background(multiBg).Foreground(selFg)
 	} else {
 		titleStyle = titleStyle.Foreground(lipgloss.Color("255"))
 		sepStyle = sepStyle.Foreground(lipgloss.Color("240"))
@@ -697,17 +574,8 @@ func (m model) renderStatusBar() string {
 			Render(truncateCols(msg, m.width))
 	}
 
-	if m.visual || len(m.sel) > 0 {
-		n := len(m.sel)
-		msg := fmt.Sprintf("[%d selected] v/esc to exit visual  Ctrl+C to quit", n)
-		return lipgloss.NewStyle().
-			Width(m.width).
-			Foreground(lipgloss.Color("3")).
-			Render(truncateCols(msg, m.width))
-	}
-
 	count := fmt.Sprintf("%d matches", len(m.filtered))
-	keys := "Alt+Q copy  Ctrl+D delete  v visual  esc quit"
+	keys := "Alt+Q copy dir  Ctrl+D delete  esc quit"
 
 	countWidth := displayWidth(count) + 2
 	avail := m.width - countWidth
@@ -855,33 +723,40 @@ func clampCursor(cursor, length int) int {
 	return cursor
 }
 
-func runTUI(dbPath string, initialQuery string) ([]Session, error) {
+func runTUI(dbPath string, initialQuery string) (*Session, error) {
 	m := initialModel(dbPath, initialQuery)
 	p := tea.NewProgram(
 		m,
 		tea.WithAltScreen(),
 	)
-	final, err := p.Run()
-	if err != nil {
-		return nil, err
-	}
-	return final.(model).GetSelectedSessions(), nil
+	_, err := p.Run()
+	return nil, err
 }
 
-func openSessions(sessions []Session) error {
-	for _, s := range sessions {
-		bin, err := exec.LookPath("opencode")
-		if err != nil {
-			return fmt.Errorf("opencode not found: %w", err)
-		}
-		cmd := exec.Command(bin, "-s", s.ID)
-		cmd.Dir = s.Directory
-		cmd.Stdin = nil
-		cmd.Stdout = nil
-		cmd.Stderr = nil
-		if err := cmd.Start(); err != nil {
-			return fmt.Errorf("opencode failed: %w", err)
-		}
+func openSessionBg(s Session) error {
+	bin, err := exec.LookPath("opencode")
+	if err != nil {
+		return fmt.Errorf("opencode not found: %w", err)
 	}
-	return nil
+	cmd := exec.Command(bin, "-s", s.ID)
+	cmd.Dir = s.Directory
+	cmd.Stdin = nil
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Start()
+}
+
+func openSession(s Session) error {
+	bin, err := exec.LookPath("opencode")
+	if err != nil {
+		return fmt.Errorf("opencode not found: %w", err)
+	}
+
+	cmd := exec.Command(bin, "-s", s.ID)
+	cmd.Dir = s.Directory
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
 }

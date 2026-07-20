@@ -14,19 +14,9 @@ func main() {
 	}
 
 	initialQuery := strings.Join(os.Args[1:], " ")
-
-	sessions, err := runTUI(db, initialQuery)
+	_, err := runTUI(db, initialQuery)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	if len(sessions) == 0 {
-		return
-	}
-
-	if err := openSessions(sessions); err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening session: %v\n", err)
 		os.Exit(1)
 	}
 }
