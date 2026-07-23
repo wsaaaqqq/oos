@@ -23,7 +23,7 @@ You discussed a bug fix three weeks ago across three different projects. Which s
 
 ```
 ╭───────────────────────────────────────────────────────────────╮
-│ bug fix                                              msgs ON   │
+│ bug fix                                                       │
 ╰───────────────────────────────────────────────────────────────╯
 > c:\project1           │ xxx bug xxx fix xxxx      │ 07-14 16:32
   c:\project2           │ xxx fix xxx bug xxxx      │ 07-13 15:20
