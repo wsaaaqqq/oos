@@ -25,9 +25,9 @@ You discussed a bug fix three weeks ago across three different projects. Which s
 ╭───────────────────────────────────────────────────────────────╮
 │ bug fix                                              msgs ON   │
 ╰───────────────────────────────────────────────────────────────╯
-> !p/my-api                 │ 帮我修复登录页面的 bug     │ 07-14 16:32
-  !p/payment-service        │ Fix race condition in order       │ 07-13 15:20
-  !w/frontend-app           │ 这个 bug 怎么定位的        │ 07-10 13:40
+> c:\project1           │ xxx bug xxx fix xxxx      │ 07-14 16:32
+  c:\project2           │ xxx fix xxx bug xxxx      │ 07-13 15:20
+  c:\project3           │ fix bug xxxxxxxxxxxx      │ 07-10 13:40
 ─────────────────────────────────────────────────────────────────
 type to search  enter: resume  esc: quit              3 matches
 ```
