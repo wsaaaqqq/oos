@@ -278,13 +278,24 @@ func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
 		var msg struct {
 			ModelID    string `json:"modelID"`
 			ProviderID string `json:"providerID"`
+			Model      struct {
+				ProviderID string `json:"providerID"`
+				ModelID    string `json:"modelID"`
+			} `json:"model"`
 		}
 		if err := json.Unmarshal([]byte(data), &msg); err != nil {
 			continue
 		}
+		// assistant messages use flat modelID/providerID,
+		// user messages use nested model.providerID/model.modelID
 		model := msg.ModelID
-		if msg.ProviderID != "" && !strings.EqualFold(msg.ProviderID, msg.ModelID) {
-			model = msg.ProviderID + "/" + msg.ModelID
+		provider := msg.ProviderID
+		if model == "" && msg.Model.ModelID != "" {
+			model = msg.Model.ModelID
+			provider = msg.Model.ProviderID
+		}
+		if provider != "" && !strings.EqualFold(provider, model) {
+			model = provider + "/" + model
 		}
 		msgRows = append(msgRows, msgRow{id: id, time: tc, model: model})
 	}
