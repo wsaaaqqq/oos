@@ -11,8 +11,10 @@ import (
 
 const (
 	colMTime  = 9
+	colMWho   = 12
+	colMTitle = 20
 	colMModel = 30
-	colMIn    = 55
+	colMIn    = 40
 )
 
 type monitorModel struct {
@@ -22,6 +24,7 @@ type monitorModel struct {
 	err       error
 	width     int
 	height    int
+	offset    int // scroll offset, 0 = newest at bottom
 }
 
 type monitorLoadedMsg struct {
@@ -76,6 +79,23 @@ func (m monitorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && (msg.Runes[0] == 'q' || msg.Runes[0] == 'Q') {
 			return m, tea.Quit
 		}
+		// scroll: up/down/pageup/pagedown
+		switch msg.Type {
+		case tea.KeyUp:
+			m.offset++
+		case tea.KeyDown:
+			if m.offset > 0 {
+				m.offset--
+			}
+		case tea.KeyPgUp:
+			m.offset += 10
+		case tea.KeyPgDown:
+			if m.offset >= 10 {
+				m.offset -= 10
+			} else {
+				m.offset = 0
+			}
+		}
 		return m, nil
 	}
 	return m, nil
@@ -109,34 +129,61 @@ func (m monitorModel) View() string {
 	b.WriteString("\n\n")
 
 	// column header
-	colHdr := fmt.Sprintf("%-*s %-*s %-*s",
+	colHdr := fmt.Sprintf("%-*s %-*s %-*s %-*s %-*s",
 		colMTime, "TIME",
+		colMWho, "WHO",
+		colMTitle, "SESSION TITLE",
 		colMModel, "MODEL",
 		colMIn, "INPUT (last 50 chars)")
 	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(colHdr))
 	b.WriteString("\n")
 
-	// messages
-	visRows := m.height - 12
+	// messages (scroll window, bottom-anchored)
+	visRows := m.height - 13
 	if visRows < 5 {
 		visRows = 5
 	}
-	msgs := m.info.Messages
-	if len(msgs) > visRows {
-		msgs = msgs[len(msgs)-visRows:]
+	all := m.info.Messages
+	total := len(all)
+	if m.offset > total-visRows {
+		m.offset = total - visRows
 	}
+	if m.offset < 0 {
+		m.offset = 0
+	}
+	start := total - m.offset - visRows
+	if start < 0 {
+		start = 0
+	}
+	end := total - m.offset
+	if end > total {
+		end = total
+	}
+	msgs := all[start:end]
 	for _, msg := range msgs {
 		timeStr := time.UnixMilli(msg.TimeCreated).Format("15:04:05")
+		who := "assistant"
+		if msg.Role == "user" {
+			who = "user"
+		} else if msg.Agent != "" {
+			who = msg.Agent
+		}
+		title := truncateCols(msg.Title, colMTitle)
+		if title == "" {
+			title = "-"
+		}
 		model := truncateCols(msg.ModelID, colMModel)
 		if model == "" {
 			model = "-"
 		}
-		in := tailText(msg.Text, 50)
+		in := tailText(msg.Text, colMIn)
 		if in == "" {
 			in = "-"
 		}
-		line := fmt.Sprintf("%-*s %-*s %s",
+		line := fmt.Sprintf("%-*s %-*s %-*s %-*s %s",
 			colMTime, timeStr,
+			colMWho, who,
+			colMTitle, title,
 			colMModel, model,
 			in)
 		b.WriteString(line)
@@ -144,13 +191,17 @@ func (m monitorModel) View() string {
 	}
 
 	// total
-	total := fmt.Sprintf("TOTAL  in %s  out %s  cost %.4f",
+	totalLine := fmt.Sprintf("TOTAL  in %s  out %s  cost %.4f",
 		fmtToken(m.info.TokensIn), fmtToken(m.info.TokensOut), m.info.Cost)
 	b.WriteString("\n")
-	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Render(total))
+	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Render(totalLine))
 
 	// footer
-	footer := fmt.Sprintf("%s  (2s refresh, Ctrl+C quit)", m.sessionID)
+	pos := ""
+	if m.offset > 0 {
+		pos = fmt.Sprintf("  ^%d older", m.offset)
+	}
+	footer := fmt.Sprintf("%s  (2s refresh, Ctrl+C quit, ↑/↓ scroll)%s", m.sessionID, pos)
 	b.WriteString("\n")
 	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(footer))
 

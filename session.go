@@ -232,6 +232,9 @@ type MonitorSession struct {
 
 type MonitorMessage struct {
 	TimeCreated int64
+	Role        string
+	Agent       string
+	Title       string
 	ModelID     string
 	Text        string
 }
@@ -254,28 +257,40 @@ func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
 	}
 	ms.ModelID = parseModelID(ms.ModelID)
 
+	// fetch main session + its subagent sessions (recursively, so
+	// nested subagents are included), ordered by time across all
 	rows, err := db.Query(`
-		SELECT id, time_created, data FROM message
-		WHERE session_id = ? ORDER BY time_created ASC
+		WITH RECURSIVE subs(id) AS (
+			SELECT id FROM session WHERE id = ?
+			UNION ALL
+			SELECT s.id FROM session s JOIN subs ON s.parent_id = subs.id
+		)
+		SELECT m.id, m.time_created, m.session_id, m.data FROM message m
+		WHERE m.session_id IN (SELECT id FROM subs)
+		ORDER BY m.time_created ASC
 	`, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("query messages: %w", err)
 	}
 
 	type msgRow struct {
-		id    string
-		time  int64
-		model string
+		id        string
+		sessionID string
+		time      int64
+		role      string
+		agent     string
+		model     string
 	}
 	var msgRows []msgRow
 	for rows.Next() {
-		var id string
+		var id, sid, data string
 		var tc int64
-		var data string
-		if err := rows.Scan(&id, &tc, &data); err != nil {
+		if err := rows.Scan(&id, &tc, &sid, &data); err != nil {
 			continue
 		}
 		var msg struct {
+			Role       string `json:"role"`
+			Agent      string `json:"agent"`
 			ModelID    string `json:"modelID"`
 			ProviderID string `json:"providerID"`
 			Model      struct {
@@ -297,7 +312,7 @@ func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
 		if provider != "" && !strings.EqualFold(provider, model) {
 			model = provider + "/" + model
 		}
-		msgRows = append(msgRows, msgRow{id: id, time: tc, model: model})
+		msgRows = append(msgRows, msgRow{id: id, sessionID: sid, time: tc, role: msg.Role, agent: msg.Agent, model: model})
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
@@ -306,6 +321,38 @@ func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
 
 	if len(msgRows) == 0 {
 		return ms, nil
+	}
+
+	// load session titles for the involved sessions
+	titleByID := make(map[string]string)
+	{
+		sidSet := make(map[string]bool)
+		for _, r := range msgRows {
+			sidSet[r.sessionID] = true
+		}
+		placeholders := make([]string, 0, len(sidSet))
+		args := make([]interface{}, 0, len(sidSet))
+		for sid := range sidSet {
+			placeholders = append(placeholders, "?")
+			args = append(args, sid)
+		}
+		trows, err := db.Query(`
+			SELECT id, title FROM session WHERE id IN (`+strings.Join(placeholders, ",")+`)
+		`, args...)
+		if err != nil {
+			return nil, fmt.Errorf("query session titles: %w", err)
+		}
+		for trows.Next() {
+			var id, title string
+			if err := trows.Scan(&id, &title); err != nil {
+				continue
+			}
+			titleByID[id] = title
+		}
+		trows.Close()
+		if err := trows.Err(); err != nil {
+			return nil, err
+		}
 	}
 
 	// batch load first text part per message
@@ -351,6 +398,9 @@ func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
 	for _, r := range msgRows {
 		ms.Messages = append(ms.Messages, MonitorMessage{
 			TimeCreated: r.time,
+			Role:        r.role,
+			Agent:       r.agent,
+			Title:       titleByID[r.sessionID],
 			ModelID:     r.model,
 			Text:        textByMsg[r.id],
 		})
