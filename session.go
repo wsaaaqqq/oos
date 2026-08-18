@@ -233,9 +233,7 @@ type MonitorSession struct {
 type MonitorMessage struct {
 	TimeCreated int64
 	ModelID     string
-	TokensIn    int64
-	TokensOut   int64
-	Cost        float64
+	Text        string
 }
 
 func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
@@ -257,28 +255,29 @@ func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
 	ms.ModelID = parseModelID(ms.ModelID)
 
 	rows, err := db.Query(`
-		SELECT time_created, data FROM message
+		SELECT id, time_created, data FROM message
 		WHERE session_id = ? ORDER BY time_created ASC
 	`, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("query messages: %w", err)
 	}
-	defer rows.Close()
 
+	type msgRow struct {
+		id    string
+		time  int64
+		model string
+	}
+	var msgRows []msgRow
 	for rows.Next() {
+		var id string
 		var tc int64
 		var data string
-		if err := rows.Scan(&tc, &data); err != nil {
+		if err := rows.Scan(&id, &tc, &data); err != nil {
 			continue
 		}
 		var msg struct {
 			ModelID    string `json:"modelID"`
 			ProviderID string `json:"providerID"`
-			Cost       float64 `json:"cost"`
-			Tokens     struct {
-				Input  int64 `json:"input"`
-				Output int64 `json:"output"`
-			} `json:"tokens"`
 		}
 		if err := json.Unmarshal([]byte(data), &msg); err != nil {
 			continue
@@ -287,13 +286,63 @@ func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
 		if msg.ProviderID != "" && !strings.EqualFold(msg.ProviderID, msg.ModelID) {
 			model = msg.ProviderID + "/" + msg.ModelID
 		}
+		msgRows = append(msgRows, msgRow{id: id, time: tc, model: model})
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(msgRows) == 0 {
+		return ms, nil
+	}
+
+	// batch load first text part per message
+	textByMsg := make(map[string]string)
+	{
+		placeholders := make([]string, len(msgRows))
+		args := make([]interface{}, len(msgRows))
+		for i, r := range msgRows {
+			placeholders[i] = "?"
+			args[i] = r.id
+		}
+		query := fmt.Sprintf(`
+			SELECT message_id, data FROM part
+			WHERE message_id IN (%s)
+			  AND data LIKE '%%"type":"text"%%'
+			ORDER BY message_id, time_created
+		`, strings.Join(placeholders, ","))
+		prows, err := db.Query(query, args...)
+		if err != nil {
+			return nil, fmt.Errorf("query parts: %w", err)
+		}
+		seen := make(map[string]bool)
+		for prows.Next() {
+			var mid, pdata string
+			if err := prows.Scan(&mid, &pdata); err != nil {
+				continue
+			}
+			if seen[mid] {
+				continue
+			}
+			text := extractPartText(pdata)
+			if text != "" {
+				textByMsg[mid] = text
+			}
+			seen[mid] = true
+		}
+		prows.Close()
+		if err := prows.Err(); err != nil {
+			return nil, err
+		}
+	}
+
+	for _, r := range msgRows {
 		ms.Messages = append(ms.Messages, MonitorMessage{
-			TimeCreated: tc,
-			ModelID:     model,
-			TokensIn:    msg.Tokens.Input,
-			TokensOut:   msg.Tokens.Output,
-			Cost:        msg.Cost,
+			TimeCreated: r.time,
+			ModelID:     r.model,
+			Text:        textByMsg[r.id],
 		})
 	}
-	return ms, rows.Err()
+	return ms, nil
 }

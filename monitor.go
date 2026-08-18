@@ -12,9 +12,7 @@ import (
 const (
 	colMTime  = 9
 	colMModel = 30
-	colMIn    = 10
-	colMOut   = 10
-	colMCost  = 10
+	colMIn    = 55
 )
 
 type monitorModel struct {
@@ -111,12 +109,10 @@ func (m monitorModel) View() string {
 	b.WriteString("\n\n")
 
 	// column header
-	colHdr := fmt.Sprintf("%-*s %-*s %*s %*s %*s",
+	colHdr := fmt.Sprintf("%-*s %-*s %-*s",
 		colMTime, "TIME",
 		colMModel, "MODEL",
-		colMIn, "IN",
-		colMOut, "OUT",
-		colMCost, "COST")
+		colMIn, "INPUT (last 50 chars)")
 	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(colHdr))
 	b.WriteString("\n")
 
@@ -135,12 +131,14 @@ func (m monitorModel) View() string {
 		if model == "" {
 			model = "-"
 		}
-		line := fmt.Sprintf("%-*s %-*s %*s %*s %*s",
+		in := tailText(msg.Text, 50)
+		if in == "" {
+			in = "-"
+		}
+		line := fmt.Sprintf("%-*s %-*s %s",
 			colMTime, timeStr,
 			colMModel, model,
-			colMIn, fmtToken(msg.TokensIn),
-			colMOut, fmtToken(msg.TokensOut),
-			colMCost, fmt.Sprintf("%.4f", msg.Cost))
+			in)
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
@@ -167,6 +165,39 @@ func fmtToken(n int64) string {
 		return fmt.Sprintf("%.1fk", float64(n)/1000)
 	}
 	return fmt.Sprintf("%d", n)
+}
+
+// tailText returns the last maxCols display columns of s.
+func tailText(s string, maxCols int) string {
+	if s == "" || maxCols <= 0 {
+		return ""
+	}
+	runes := []rune(s)
+	// trim newlines for single-line display
+	var clean []rune
+	for _, r := range runes {
+		if r == '\n' || r == '\r' || r == '\t' {
+			clean = append(clean, ' ')
+		} else {
+			clean = append(clean, r)
+		}
+	}
+	// walk from the end, collecting up to maxCols display columns
+	w := 0
+	end := len(clean)
+	start := end
+	for i := end - 1; i >= 0; i-- {
+		rw := 1
+		if clean[i] > 127 {
+			rw = 2
+		}
+		if w+rw > maxCols {
+			break
+		}
+		w += rw
+		start = i
+	}
+	return string(clean[start:])
 }
 
 func runMonitor(dbPath, sessionID string) error {
