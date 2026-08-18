@@ -229,8 +229,13 @@ func fmtToken(n int64) string {
 	return fmt.Sprintf("%d", n)
 }
 
-// padCols pads s on the right with spaces to the given display width.
+// padCols truncates s to the given display width if longer, then pads
+// it on the right with spaces to exactly that width.
 func padCols(s string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	s = truncateCols(s, width)
 	w := displayWidth(s)
 	if w >= width {
 		return s
