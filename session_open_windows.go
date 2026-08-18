@@ -32,12 +32,17 @@ func spawnMonitor(sessionID string) error {
 		return fmt.Errorf("get self path: %w", err)
 	}
 
+	args := []string{self, "--monitor"}
+	if sessionID != "" {
+		args = append(args, sessionID)
+	}
+
 	if _, err := exec.LookPath("wt"); err == nil {
-		cmd := exec.Command("wt", "nt", self, "--monitor", sessionID)
+		cmd := exec.Command("wt", append([]string{"nt"}, args...)...)
 		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 		return cmd.Start()
 	}
 
-	cmd := exec.Command("cmd", "/c", "start", "", self, "--monitor", sessionID)
+	cmd := exec.Command("cmd", append([]string{"/c", "start", ""}, args...)...)
 	return cmd.Start()
 }

@@ -184,7 +184,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 'q' || msg.Runes[0] == 'Q') {
 			m.confirmDelete = false
-			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
+			if m.cursor >= 0 && m.cursor < len(m.filtered) {
 				dir := m.filtered[m.cursor].Directory
 				if len(dir) >= 2 && dir[1] == ':' {
 					dir = strings.ReplaceAll(dir, "/", "\\")
@@ -197,16 +197,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 'm' || msg.Runes[0] == 'M') {
 			m.confirmDelete = false
-			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
-				id := m.filtered[m.cursor].ID
-				if err := spawnMonitor(id); err != nil {
-					m.err = fmt.Errorf("spawn monitor: %w", err)
-				}
+			id := ""
+			if m.cursor >= 0 && m.cursor < len(m.filtered) {
+				id = m.filtered[m.cursor].ID
+			}
+			if err := spawnMonitor(id); err != nil {
+				m.err = fmt.Errorf("spawn monitor: %w", err)
 			}
 			return m, nil
 		}
 		if msg.Type == tea.KeyCtrlD {
-			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
+			if m.cursor >= 0 && m.cursor < len(m.filtered) {
 				id := m.filtered[m.cursor].ID
 				if m.confirmDelete && m.pendingDelID == id {
 					m.confirmDelete = false
@@ -225,7 +226,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyEnter:
-			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
+			if m.cursor >= 0 && m.cursor < len(m.filtered) {
 				s := m.filtered[m.cursor]
 				err := openSessionBg(s)
 				if err != nil {
@@ -237,12 +238,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyUp:
 			if m.cursor > 0 {
 				m.cursor--
+			} else if m.cursor == 0 {
+				m.cursor = -1 // cancel selection
 			}
 			m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
 			return m, nil
 
 		case tea.KeyDown:
-			if m.cursor < len(m.filtered)-1 {
+			if m.cursor < 0 {
+				m.cursor = 0
+			} else if m.cursor < len(m.filtered)-1 {
 				m.cursor++
 			}
 			m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
@@ -311,6 +316,9 @@ func (m model) visibleSlots() int {
 
 func calcScrollOff(curOff, cursor, visible int) int {
 	if visible <= 0 {
+		return 0
+	}
+	if cursor < 0 {
 		return 0
 	}
 	if cursor < curOff {
@@ -727,8 +735,11 @@ func truncateCols(s string, maxCols int) string {
 }
 
 func clampCursor(cursor, length int) int {
-	if length == 0 {
-		return 0
+	if length <= 0 {
+		return -1
+	}
+	if cursor < 0 {
+		return -1 // keep "no selection" state
 	}
 	if cursor >= length {
 		return length - 1

@@ -248,27 +248,50 @@ func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
 
 	ms := &MonitorSession{ID: sessionID}
 
-	err = db.QueryRow(`
-		SELECT title, agent, model, tokens_input, tokens_output, cost
-		FROM session WHERE id = ?
-	`, sessionID).Scan(&ms.Title, &ms.Agent, &ms.ModelID, &ms.TokensIn, &ms.TokensOut, &ms.Cost)
-	if err != nil {
-		return nil, fmt.Errorf("query session: %w", err)
+	if sessionID == "" {
+		// global mode: all top-level sessions
+		err = db.QueryRow(`
+			SELECT COUNT(*) FROM session
+			WHERE parent_id IS NULL OR parent_id = ''
+		`).Scan(&ms.TokensIn)
+		if err != nil {
+			return nil, fmt.Errorf("query sessions: %w", err)
+		}
+	} else {
+		err = db.QueryRow(`
+			SELECT title, agent, model, tokens_input, tokens_output, cost
+			FROM session WHERE id = ?
+		`, sessionID).Scan(&ms.Title, &ms.Agent, &ms.ModelID, &ms.TokensIn, &ms.TokensOut, &ms.Cost)
+		if err != nil {
+			return nil, fmt.Errorf("query session: %w", err)
+		}
+		ms.ModelID = parseModelID(ms.ModelID)
 	}
-	ms.ModelID = parseModelID(ms.ModelID)
 
-	// fetch main session + its subagent sessions (recursively, so
-	// nested subagents are included), ordered by time across all
-	rows, err := db.Query(`
-		WITH RECURSIVE subs(id) AS (
-			SELECT id FROM session WHERE id = ?
-			UNION ALL
-			SELECT s.id FROM session s JOIN subs ON s.parent_id = subs.id
-		)
-		SELECT m.id, m.time_created, m.session_id, m.data FROM message m
-		WHERE m.session_id IN (SELECT id FROM subs)
-		ORDER BY m.time_created ASC
-	`, sessionID)
+	var rows *sql.Rows
+	if sessionID == "" {
+		// global mode: newest messages across all top-level sessions
+		rows, err = db.Query(`
+			SELECT m.id, m.time_created, m.session_id, m.data FROM message m
+			WHERE m.session_id IN (
+				SELECT id FROM session WHERE parent_id IS NULL OR parent_id = ''
+			)
+			ORDER BY m.time_created DESC LIMIT 300
+		`)
+	} else {
+		// fetch main session + its subagent sessions (recursively, so
+		// nested subagents are included), ordered by time across all
+		rows, err = db.Query(`
+			WITH RECURSIVE subs(id) AS (
+				SELECT id FROM session WHERE id = ?
+				UNION ALL
+				SELECT s.id FROM session s JOIN subs ON s.parent_id = subs.id
+			)
+			SELECT m.id, m.time_created, m.session_id, m.data FROM message m
+			WHERE m.session_id IN (SELECT id FROM subs)
+			ORDER BY m.time_created ASC
+		`, sessionID)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("query messages: %w", err)
 	}
@@ -317,6 +340,13 @@ func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+
+	if sessionID == "" {
+		// global mode queried DESC; reverse to ascending
+		for i, j := 0, len(msgRows)-1; i < j; i, j = i+1, j-1 {
+			msgRows[i], msgRows[j] = msgRows[j], msgRows[i]
+		}
 	}
 
 	if len(msgRows) == 0 {

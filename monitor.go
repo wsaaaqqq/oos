@@ -124,6 +124,9 @@ func (m monitorModel) View() string {
 		Width(w - 2)
 
 	title := truncateCols(m.info.Title, 40)
+	if m.info.ID == "" {
+		title = "ALL SESSIONS"
+	}
 	meta := fmt.Sprintf("%s  %s  %s", title, m.info.Agent, m.info.ModelID)
 	b.WriteString(header.Render(meta))
 	b.WriteString("\n\n")
@@ -188,18 +191,28 @@ func (m monitorModel) View() string {
 		b.WriteString("\n")
 	}
 
-	// total
-	totalLine := fmt.Sprintf("TOTAL  in %s  out %s  cost %.4f",
-		fmtToken(m.info.TokensIn), fmtToken(m.info.TokensOut), m.info.Cost)
-	b.WriteString("\n")
-	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Render(totalLine))
+	// total (single-session mode only)
+	if m.info.ID != "" {
+		totalLine := fmt.Sprintf("TOTAL  in %s  out %s  cost %.4f",
+			fmtToken(m.info.TokensIn), fmtToken(m.info.TokensOut), m.info.Cost)
+		b.WriteString("\n")
+		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Render(totalLine))
+	} else {
+		b.WriteString("\n")
+		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("11")).
+			Render(fmt.Sprintf("TOTAL  %d top-level sessions", m.info.TokensIn)))
+	}
 
 	// footer
 	pos := ""
 	if m.offset > 0 {
 		pos = fmt.Sprintf("  ^%d older", m.offset)
 	}
-	footer := fmt.Sprintf("%s  (2s refresh, Ctrl+C quit, ↑/↓ scroll)%s", m.sessionID, pos)
+	who := m.sessionID
+	if who == "" {
+		who = "ALL SESSIONS"
+	}
+	footer := fmt.Sprintf("%s  (2s refresh, Ctrl+C quit, ↑/↓ scroll)%s", who, pos)
 	b.WriteString("\n")
 	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(footer))
 

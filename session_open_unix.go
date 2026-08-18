@@ -23,6 +23,10 @@ func spawnMonitor(sessionID string) error {
 	if err != nil {
 		return fmt.Errorf("get self path: %w", err)
 	}
-	cmd := exec.Command(self, "--monitor", sessionID)
+	args := []string{"--monitor"}
+	if sessionID != "" {
+		args = append(args, sessionID)
+	}
+	cmd := exec.Command(self, args...)
 	return cmd.Start()
 }
