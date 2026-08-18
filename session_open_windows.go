@@ -32,7 +32,7 @@ func spawnMonitor(sessionID string) error {
 		return fmt.Errorf("get self path: %w", err)
 	}
 
-	args := []string{self, "--monitor"}
+	args := []string{self, "-m"}
 	if sessionID != "" {
 		args = append(args, sessionID)
 	}

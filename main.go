@@ -21,7 +21,7 @@ func main() {
 			}
 			doUpgrade(tag)
 			return
-		case "--monitor":
+		case "-m":
 			db := dbPath()
 			if _, err := os.Stat(db); os.IsNotExist(err) {
 				fmt.Fprintf(os.Stderr, "Database not found: %s\n", db)

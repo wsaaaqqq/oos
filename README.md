@@ -68,7 +68,8 @@ oos bug fix !plan    # find bug fix sessions, exclude plan agent
 oos -v               # show version
 oos --upgrade        # upgrade to latest release (GitHub + Gitee)
 oos --upgrade v1.0.0 # install a specific version
-oos --monitor <id>   # live token monitor for one session (2s refresh)
+oos -m <id>            # live monitor for one session (2s refresh)
+oos -m                 # global monitor: all sessions' newest messages
 ```
 
 Type a keyword, see matching sessions from all projects instantly. `↑` / `↓` to pick the session, `Enter` to open and continue the conversation.
