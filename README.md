@@ -68,8 +68,8 @@ oos bug fix !plan    # find bug fix sessions, exclude plan agent
 oos -v               # show version
 oos --upgrade        # upgrade to latest release (GitHub + Gitee)
 oos --upgrade v1.0.0 # install a specific version
-oos -m <id>            # live monitor for one session (2s refresh)
-oos -m                 # global monitor: all sessions' newest messages
+oos -m <id>          # live monitor for one session (2s refresh)
+oos -m               # global monitor: all sessions' newest messages
 ```
 
 Type a keyword, see matching sessions from all projects instantly. `↑` / `↓` to pick the session, `Enter` to open and continue the conversation.
@@ -81,12 +81,12 @@ Type a keyword, see matching sessions from all projects instantly. `↑` / `↓`
 | Key | Action |
 |---|---|
 | type keywords | real-time filter, space-separated AND logic, `!key` to exclude |
-| `↑` / `↓` | move selection |
+| `↑` / `↓` | move selection (`↑` at top deselects) |
 | `Enter` | `cd` to project dir + open session with `opencode -s <id>` |
 | `Alt+S` | toggle full-message search (ON by default) |
 | `Ctrl+W` | delete last keyword |
 | `Alt+Q` | copy project directory path to clipboard |
-| `Alt+M` | open live token monitor for selected session in a new tab |
+| `Alt+M` | open live monitor for selected session (no selection = global monitor) |
 | `Ctrl+D` | delete session (press twice to confirm) |
 | `Esc` | quit |
 
@@ -106,6 +106,27 @@ Type a keyword, see matching sessions from all projects instantly. `↑` / `↓`
 | MSGS OFF | title + slug + dir + model + agent + user question | — |
 
 Toggle with `Alt+S`. MSGS OFF is faster; MSGS ON searches deep into conversation history.
+
+## Monitor
+
+Live message flow, refreshing every 2 seconds. Shows who said what, with which model, across sessions.
+
+```bash
+oos -m <id>    # one session + its subagent sessions
+oos -m         # all top-level sessions, newest 300 messages
+```
+
+| Column | Meaning |
+|---|---|
+| TIME | message time |
+| WHO | `user` = your question, agent name = that agent's reply |
+| SESSION TITLE | which session the message belongs to (subagent sessions like `(@explore subagent)` show up here) |
+| MODEL | provider/model that handled the message |
+| INPUT | first 50 chars of the message text |
+
+Scroll with `↑` / `↓` / `PgUp` / `PgDn`. Quit with `q` or `Ctrl+C`.
+
+Open from the main TUI with `Alt+M`: with a selection it monitors that session, without one it opens the global monitor.
 
 ## How It Works
 

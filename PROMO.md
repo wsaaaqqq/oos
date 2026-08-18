@@ -10,7 +10,7 @@ Repository: https://github.com/wsaaaqqq/oos
 ## One-liner (通用)
 
 ```
-oos — 跨所有项目的 OpenCode 会话搜索引擎。输入关键字，瞬间定位到你要找的对话，回车继续。Go TUI，零配置，一条命令安装。
+oos — 跨所有项目的 OpenCode 会话搜索引擎。输入关键字，瞬间定位到你要找的对话，回车继续。实时监控（-m）看所有会话的消息流、模型和提问者。Go TUI，零配置，一条命令安装。
 ```
 
 ---
