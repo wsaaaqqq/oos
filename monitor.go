@@ -129,12 +129,11 @@ func (m monitorModel) View() string {
 	b.WriteString("\n\n")
 
 	// column header
-	colHdr := fmt.Sprintf("%-*s %-*s %-*s %-*s %-*s",
-		colMTime, "TIME",
-		colMWho, "WHO",
-		colMTitle, "SESSION TITLE",
-		colMModel, "MODEL",
-		colMIn, "INPUT (last 50 chars)")
+	colHdr := padCols("TIME", colMTime) + " " +
+		padCols("WHO", colMWho) + " " +
+		padCols("SESSION TITLE", colMTitle) + " " +
+		padCols("MODEL", colMModel) + " " +
+		padCols("INPUT (first 50 chars)", colMIn)
 	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(colHdr))
 	b.WriteString("\n")
 
@@ -176,16 +175,15 @@ func (m monitorModel) View() string {
 		if model == "" {
 			model = "-"
 		}
-		in := tailText(msg.Text, colMIn)
+		in := headText(msg.Text, colMIn)
 		if in == "" {
 			in = "-"
 		}
-		line := fmt.Sprintf("%-*s %-*s %-*s %-*s %s",
-			colMTime, timeStr,
-			colMWho, who,
-			colMTitle, title,
-			colMModel, model,
-			in)
+		line := padCols(timeStr, colMTime) + " " +
+			padCols(who, colMWho) + " " +
+			padCols(title, colMTitle) + " " +
+			padCols(model, colMModel) + " " +
+			in
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
@@ -218,8 +216,17 @@ func fmtToken(n int64) string {
 	return fmt.Sprintf("%d", n)
 }
 
-// tailText returns the last maxCols display columns of s.
-func tailText(s string, maxCols int) string {
+// padCols pads s on the right with spaces to the given display width.
+func padCols(s string, width int) string {
+	w := displayWidth(s)
+	if w >= width {
+		return s
+	}
+	return s + strings.Repeat(" ", width-w)
+}
+
+// headText returns the first maxCols display columns of s.
+func headText(s string, maxCols int) string {
 	if s == "" || maxCols <= 0 {
 		return ""
 	}
@@ -233,11 +240,10 @@ func tailText(s string, maxCols int) string {
 			clean = append(clean, r)
 		}
 	}
-	// walk from the end, collecting up to maxCols display columns
+	// walk from the start, collecting up to maxCols display columns
 	w := 0
-	end := len(clean)
-	start := end
-	for i := end - 1; i >= 0; i-- {
+	end := 0
+	for i := 0; i < len(clean); i++ {
 		rw := 1
 		if clean[i] > 127 {
 			rw = 2
@@ -246,9 +252,9 @@ func tailText(s string, maxCols int) string {
 			break
 		}
 		w += rw
-		start = i
+		end = i + 1
 	}
-	return string(clean[start:])
+	return string(clean[:end])
 }
 
 func runMonitor(dbPath, sessionID string) error {
