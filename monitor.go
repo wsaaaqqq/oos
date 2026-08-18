@@ -11,7 +11,7 @@ import (
 
 const (
 	colMTime  = 9
-	colMWho   = 5
+	colMWho   = 10
 	colMTitle = 20
 	colMModel = 30
 	colMIn    = 60
