@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	colMTime = 9
-	colMRole = 11
-	colMIn   = 10
-	colMOut  = 10
-	colMCost = 10
+	colMTime  = 9
+	colMModel = 30
+	colMIn    = 10
+	colMOut   = 10
+	colMCost  = 10
 )
 
 type monitorModel struct {
@@ -113,7 +113,7 @@ func (m monitorModel) View() string {
 	// column header
 	colHdr := fmt.Sprintf("%-*s %-*s %*s %*s %*s",
 		colMTime, "TIME",
-		colMRole, "ROLE",
+		colMModel, "MODEL",
 		colMIn, "IN",
 		colMOut, "OUT",
 		colMCost, "COST")
@@ -131,13 +131,13 @@ func (m monitorModel) View() string {
 	}
 	for _, msg := range msgs {
 		timeStr := time.UnixMilli(msg.TimeCreated).Format("15:04:05")
-		role := msg.Role
-		if role == "" {
-			role = "-"
+		model := truncateCols(msg.ModelID, colMModel)
+		if model == "" {
+			model = "-"
 		}
 		line := fmt.Sprintf("%-*s %-*s %*s %*s %*s",
 			colMTime, timeStr,
-			colMRole, role,
+			colMModel, model,
 			colMIn, fmtToken(msg.TokensIn),
 			colMOut, fmtToken(msg.TokensOut),
 			colMCost, fmt.Sprintf("%.4f", msg.Cost))

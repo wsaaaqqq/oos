@@ -232,7 +232,7 @@ type MonitorSession struct {
 
 type MonitorMessage struct {
 	TimeCreated int64
-	Role        string
+	ModelID     string
 	TokensIn    int64
 	TokensOut   int64
 	Cost        float64
@@ -272,9 +272,10 @@ func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
 			continue
 		}
 		var msg struct {
-			Role   string `json:"role"`
-			Cost   float64 `json:"cost"`
-			Tokens struct {
+			ModelID    string `json:"modelID"`
+			ProviderID string `json:"providerID"`
+			Cost       float64 `json:"cost"`
+			Tokens     struct {
 				Input  int64 `json:"input"`
 				Output int64 `json:"output"`
 			} `json:"tokens"`
@@ -282,9 +283,13 @@ func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
 		if err := json.Unmarshal([]byte(data), &msg); err != nil {
 			continue
 		}
+		model := msg.ModelID
+		if msg.ProviderID != "" && !strings.EqualFold(msg.ProviderID, msg.ModelID) {
+			model = msg.ProviderID + "/" + msg.ModelID
+		}
 		ms.Messages = append(ms.Messages, MonitorMessage{
 			TimeCreated: tc,
-			Role:        msg.Role,
+			ModelID:     model,
 			TokensIn:    msg.Tokens.Input,
 			TokensOut:   msg.Tokens.Output,
 			Cost:        msg.Cost,
