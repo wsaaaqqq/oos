@@ -217,3 +217,78 @@ func LoadAllMessages(dbFile string) (map[string][]string, error) {
 	}
 	return result, rows.Err()
 }
+
+// MonitorSession is the info + message flow for a single session monitor.
+type MonitorSession struct {
+	ID           string
+	Title        string
+	Agent        string
+	ModelID      string
+	TokensIn     int64
+	TokensOut    int64
+	Cost         float64
+	Messages     []MonitorMessage
+}
+
+type MonitorMessage struct {
+	TimeCreated int64
+	Role        string
+	TokensIn    int64
+	TokensOut   int64
+	Cost        float64
+}
+
+func LoadMonitor(dbFile, sessionID string) (*MonitorSession, error) {
+	db, err := sql.Open("sqlite", dbFile)
+	if err != nil {
+		return nil, fmt.Errorf("open db: %w", err)
+	}
+	defer db.Close()
+
+	ms := &MonitorSession{ID: sessionID}
+
+	err = db.QueryRow(`
+		SELECT title, agent, model, tokens_input, tokens_output, cost
+		FROM session WHERE id = ?
+	`, sessionID).Scan(&ms.Title, &ms.Agent, &ms.ModelID, &ms.TokensIn, &ms.TokensOut, &ms.Cost)
+	if err != nil {
+		return nil, fmt.Errorf("query session: %w", err)
+	}
+	ms.ModelID = parseModelID(ms.ModelID)
+
+	rows, err := db.Query(`
+		SELECT time_created, data FROM message
+		WHERE session_id = ? ORDER BY time_created ASC
+	`, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("query messages: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var tc int64
+		var data string
+		if err := rows.Scan(&tc, &data); err != nil {
+			continue
+		}
+		var msg struct {
+			Role   string `json:"role"`
+			Cost   float64 `json:"cost"`
+			Tokens struct {
+				Input  int64 `json:"input"`
+				Output int64 `json:"output"`
+			} `json:"tokens"`
+		}
+		if err := json.Unmarshal([]byte(data), &msg); err != nil {
+			continue
+		}
+		ms.Messages = append(ms.Messages, MonitorMessage{
+			TimeCreated: tc,
+			Role:        msg.Role,
+			TokensIn:    msg.Tokens.Input,
+			TokensOut:   msg.Tokens.Output,
+			Cost:        msg.Cost,
+		})
+	}
+	return ms, rows.Err()
+}

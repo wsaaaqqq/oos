@@ -1,0 +1,14 @@
++1 on needing a session picker at startup. In the meantime I built a standalone one:
+
+It reads the OpenCode SQLite db directly, so it searches ALL sessions from
+ALL projects at once — no directory scoping, no pagination limits, no
+subagent dilution.
+
+- Type a keyword → real-time filter across every project
+- ↑/↓ to pick, Enter to resume the conversation
+- Multi-keyword AND + ! exclusion
+- Zero config, single binary
+
+https://github.com/wsaaaqqq/oos
+
+MIT, one-liner install. Happy to take feedback.

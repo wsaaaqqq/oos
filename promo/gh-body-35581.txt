@@ -1,0 +1,7 @@
++1 on this. I had the same frustration and wrote a tool to work around it in the meantime:
+
+https://github.com/wsaaaqqq/oos
+
+It reads the OpenCode SQLite db directly, so it shows every session from every project -- no directory scoping, no limits. Type any keyword, see results instantly across all projects, Enter to resume.
+
+Not a replacement for a proper TUI picker, but a working stopgap while this feature request plays out. Hope it helps.

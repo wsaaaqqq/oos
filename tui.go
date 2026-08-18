@@ -195,6 +195,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
+		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 'm' || msg.Runes[0] == 'M') {
+			m.confirmDelete = false
+			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
+				id := m.filtered[m.cursor].ID
+				if err := spawnMonitor(id); err != nil {
+					m.err = fmt.Errorf("spawn monitor: %w", err)
+				}
+			}
+			return m, nil
+		}
 		if msg.Type == tea.KeyCtrlD {
 			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
 				id := m.filtered[m.cursor].ID
@@ -578,7 +588,7 @@ func (m model) renderStatusBar() string {
 	}
 
 	count := fmt.Sprintf("%d matches", len(m.filtered))
-	keys := "Alt+Q copy dir  Ctrl+D delete  esc quit"
+	keys := "Alt+Q copy  Alt+M monitor  Ctrl+D delete  esc quit"
 
 	countWidth := displayWidth(count) + 2
 	avail := m.width - countWidth

@@ -1,0 +1,12 @@
+I ran into the exact same problem -- sessions scattered across projects, no way to find the right one without `cd`-ing around.
+
+I ended up building oos, a standalone TUI tool that reads the OpenCode SQLite db directly and lets you search across ALL sessions from ALL projects at once:
+
+- Type a keyword -> real-time filter across all projects
+- ↑/↓ to pick, Enter to resume the conversation
+- Multi-keyword AND + ! exclusion
+- Zero config, single binary
+
+https://github.com/wsaaaqqq/oos
+
+It's been a lifesaver for my 400+ sessions. Not a full fix for the TUI picker, but a working solution today. Would love feedback if you try it.

@@ -21,6 +21,21 @@ func main() {
 			}
 			doUpgrade(tag)
 			return
+		case "--monitor":
+			if len(os.Args) < 3 {
+				fmt.Fprintln(os.Stderr, "Usage: oos --monitor <session-id>")
+				os.Exit(1)
+			}
+			db := dbPath()
+			if _, err := os.Stat(db); os.IsNotExist(err) {
+				fmt.Fprintf(os.Stderr, "Database not found: %s\n", db)
+				os.Exit(1)
+			}
+			if err := runMonitor(db, os.Args[2]); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			return
 		}
 	}
 

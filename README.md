@@ -65,6 +65,10 @@ iwr -useb https://raw.githubusercontent.com/wsaaaqqq/oos/master/uninstall.ps1 | 
 oos                  # search all sessions across all projects
 oos java spring      # sessions matching both "java" AND "spring"
 oos bug fix !plan    # find bug fix sessions, exclude plan agent
+oos -v               # show version
+oos --upgrade        # upgrade to latest release (GitHub + Gitee)
+oos --upgrade v1.0.0 # install a specific version
+oos --monitor <id>   # live token monitor for one session (2s refresh)
 ```
 
 Type a keyword, see matching sessions from all projects instantly. `↑` / `↓` to pick the session, `Enter` to open and continue the conversation.
@@ -81,6 +85,7 @@ Type a keyword, see matching sessions from all projects instantly. `↑` / `↓`
 | `Alt+S` | toggle full-message search (ON by default) |
 | `Ctrl+W` | delete last keyword |
 | `Alt+Q` | copy project directory path to clipboard |
+| `Alt+M` | open live token monitor for selected session in a new tab |
 | `Ctrl+D` | delete session (press twice to confirm) |
 | `Esc` | quit |
 

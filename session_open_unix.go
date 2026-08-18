@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 )
 
@@ -14,5 +15,14 @@ func openSessionBg(s Session) error {
 	}
 	cmd := exec.Command(bin, "-s", s.ID)
 	cmd.Dir = s.Directory
+	return cmd.Start()
+}
+
+func spawnMonitor(sessionID string) error {
+	self, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("get self path: %w", err)
+	}
+	cmd := exec.Command(self, "--monitor", sessionID)
 	return cmd.Start()
 }
