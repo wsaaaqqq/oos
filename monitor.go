@@ -14,7 +14,7 @@ const (
 	colMWho   = 5
 	colMTitle = 20
 	colMModel = 30
-	colMIn    = 40
+	colMIn    = 60
 )
 
 type monitorModel struct {
