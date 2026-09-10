@@ -29,7 +29,7 @@ func openSessionBg(s Session) error {
 	}
 
 	if wt, ok := windowsTerminalPath(); ok {
-		cmd := exec.Command(wt, "nt", "-d", s.Directory, bin, "-s", s.ID)
+		cmd := exec.Command(wt, "-w", "0", "nt", "-d", s.Directory, bin, "-s", s.ID)
 		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 		return cmd.Start()
 	}
@@ -51,7 +51,7 @@ func spawnMonitor(sessionID string) error {
 	}
 
 	if wt, ok := windowsTerminalPath(); ok {
-		cmd := exec.Command(wt, append([]string{"nt"}, args...)...)
+		cmd := exec.Command(wt, append([]string{"-w", "0", "nt"}, args...)...)
 		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 		return cmd.Start()
 	}
