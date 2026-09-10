@@ -6,8 +6,21 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 )
+
+func windowsTerminalPath() (string, bool) {
+	localAppData := os.Getenv("LOCALAPPDATA")
+	if localAppData == "" {
+		return "", false
+	}
+	path := filepath.Join(localAppData, "Microsoft", "WindowsApps", "wt.exe")
+	if _, err := os.Stat(path); err != nil {
+		return "", false
+	}
+	return path, true
+}
 
 func openSessionBg(s Session) error {
 	bin, err := exec.LookPath("opencode")
@@ -15,8 +28,8 @@ func openSessionBg(s Session) error {
 		return fmt.Errorf("opencode not found: %w", err)
 	}
 
-	if _, err := exec.LookPath("wt"); err == nil {
-		cmd := exec.Command("wt", "nt", "-d", s.Directory, bin, "-s", s.ID)
+	if wt, ok := windowsTerminalPath(); ok {
+		cmd := exec.Command(wt, "nt", "-d", s.Directory, bin, "-s", s.ID)
 		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 		return cmd.Start()
 	}
@@ -37,8 +50,8 @@ func spawnMonitor(sessionID string) error {
 		args = append(args, sessionID)
 	}
 
-	if _, err := exec.LookPath("wt"); err == nil {
-		cmd := exec.Command("wt", append([]string{"nt"}, args...)...)
+	if wt, ok := windowsTerminalPath(); ok {
+		cmd := exec.Command(wt, append([]string{"nt"}, args...)...)
 		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 		return cmd.Start()
 	}
