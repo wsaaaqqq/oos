@@ -40,4 +40,4 @@ iwr -useb https://raw.githubusercontent.com/wsaaaqqq/oos/master/install.ps1 | ie
 GitHub: https://github.com/wsaaaqqq/oos
 Gitee（国内镜像）: https://gitee.com/haitao666/oos
 
-<!-- TODO: 插入终端录屏 gif -->
+![oos demo](https://raw.githubusercontent.com/wsaaaqqq/oos/master/demo.gif)

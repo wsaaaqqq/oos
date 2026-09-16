@@ -104,4 +104,4 @@ License: MIT
 
 ---
 
-<!-- TODO: 插入终端录屏 gif -->
+![oos demo](https://raw.githubusercontent.com/wsaaaqqq/oos/master/demo.gif)

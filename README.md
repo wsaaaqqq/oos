@@ -3,6 +3,10 @@
 > TUI interactive fuzzy finder for [OpenCode](https://opencode.ai) sessions. Search across all sessions from all projects at once — find any conversation by keyword and resume instantly.
 
 <p align="center">
+  <img src="demo.gif" alt="oos demo: type keywords, pick a session, Enter to resume">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/go-%2300ADD8.svg?style=flat&logo=go&logoColor=white">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey">
