@@ -1,7 +1,0 @@
-The discoverability issue resonated. For the specific pain of finding old sessions (especially across projects), I built a small TUI tool:
-
-https://github.com/wsaaaqqq/oos
-
-It searches all OpenCode sessions at once -- type a keyword, see matches from every project instantly, Enter to jump back in. No need to remember which project it was in.
-
-Not a full sidebar solution, but solves the "where was that conversation" problem today. Happy to take feedback.

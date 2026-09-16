@@ -1,7 +1,0 @@
-I know this was closed, but I had the exact same pain -- 14 invisible sessions stuck in other project directories.
-
-I built a workaround: oos (https://github.com/wsaaaqqq/oos)
-
-It's a small TUI that reads the OpenCode database directly, so it naturally searches across ALL projects -- no --all flag needed. Type a keyword, find any session from any project, Enter to resume.
-
-Since this feature request was closed, I figured it might help others in the same boat. MIT, one-liner install.
