@@ -86,7 +86,7 @@ Type a keyword, see matching sessions from all projects instantly. `↑` / `↓`
 |---|---|
 | type keywords | real-time filter, space-separated AND logic, `!key` to exclude |
 | `↑` / `↓` | move selection (`↑` at top deselects) |
-| `Enter` | `cd` to project dir + open session with `opencode -s <id>` |
+| `Enter` | `cd` to project dir + open session with `opencode -s <id>` in a new tab (the tab stays open after you quit opencode) |
 | `Alt+S` | toggle full-message search (ON by default) |
 | `Ctrl+W` | delete last keyword |
 | `Alt+Q` | copy project directory path to clipboard |
