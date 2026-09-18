@@ -408,14 +408,14 @@ func (m model) View() string {
 }
 
 func (m model) renderSearchBar() string {
-	msgsTag := "msgs OFF"
+	// right tag: search-mode when toggled off, otherwise loading progress
+	tag := "msgs OFF"
 	if m.searchMsgs {
-		msgsTag = "msgs ON"
-	}
-	if !m.sessionsDone {
-		msgsTag = "sessions ..."
-	} else if m.loadingMsgs {
-		msgsTag = "msgs ..."
+		if !m.sessionsDone || m.loadingMsgs {
+			tag = fmt.Sprintf("%d loaded", len(m.sessions))
+		} else {
+			tag = "all loaded"
+		}
 	}
 
 	searchStyle := lipgloss.NewStyle().
@@ -426,9 +426,9 @@ func (m model) renderSearchBar() string {
 
 	rightTag := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("240")).
-		Render(" " + msgsTag)
+		Render(" " + tag)
 
-	inputWidth := m.width - 16
+	inputWidth := m.width - 14
 	if inputWidth < 20 {
 		inputWidth = 20
 	}
