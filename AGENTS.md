@@ -119,4 +119,5 @@ Gitee token: stored in Windows Credential Manager (`git:https://gitee.com`), ret
 - GoReleaser uses `archives.format: binary`, meaning release assets are single files with no .zip/.tar.gz wrapper
 - `install.sh`/`install.ps1` expect release assets named `oos_{os}_{arch}`, NOT `{project_name}_{os}_{arch}`
 - The GoReleaser `name_template` is `oos_{{ .Os }}_{{ .Arch }}`
-- On Windows, `openSession()` uses `exec.Command` (not `syscall.Exec`) to launch `opencode -s <id>`
+- On Windows, `openSessionBg()`/`spawnMonitor()` open a Windows Terminal tab via `wt -w 0 nt` (`-w 0` reuses the current window). They locate `wt.exe` under `%LOCALAPPDATA%\Microsoft\WindowsApps` instead of relying on PATH
+- The new tab hosts a shell (`cmd /k` or `powershell -NoExit`, matching `parentShellName()` detected from oos's parent process) rather than `opencode` directly, so quitting opencode with Ctrl+C returns to a prompt and does not close the tab
