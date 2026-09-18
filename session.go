@@ -27,7 +27,19 @@ func dbPath() string {
 	return filepath.Join(home, ".local", "share", "opencode", "opencode.db")
 }
 
-func LoadSessions(dbFile string) ([]Session, error) {
+// LoadSessions loads the most recent `limit` top-level sessions (limit <= 0
+// means all), together with each session's first user message.
+func LoadSessions(dbFile string, limit int) ([]Session, error) {
+	return loadSessions(dbFile, limit, nil)
+}
+
+// LoadSessionsExcluding loads every top-level session except excludeIDs.
+// Used to fetch the remainder after the initial recent-session batch.
+func LoadSessionsExcluding(dbFile string, excludeIDs []string) ([]Session, error) {
+	return loadSessions(dbFile, 0, excludeIDs)
+}
+
+func loadSessions(dbFile string, limit int, excludeIDs []string) ([]Session, error) {
 	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
@@ -35,7 +47,7 @@ func LoadSessions(dbFile string) ([]Session, error) {
 	defer db.Close()
 
 	var sessions []Session
-	if err := loadSessionRows(db, &sessions); err != nil {
+	if err := loadSessionRows(db, &sessions, limit, excludeIDs); err != nil {
 		return nil, err
 	}
 	if err := loadFirstUserTexts(db, sessions); err != nil {
@@ -44,14 +56,28 @@ func LoadSessions(dbFile string) ([]Session, error) {
 	return sessions, nil
 }
 
-func loadSessionRows(db *sql.DB, sessions *[]Session) error {
-	rows, err := db.Query(`
+func loadSessionRows(db *sql.DB, sessions *[]Session, limit int, excludeIDs []string) error {
+	query := `
 		SELECT s.id, s.title, s.slug, s.directory, s.model, s.agent, s.time_updated
 		FROM session s
 		WHERE s.time_archived IS NULL
-		  AND (s.parent_id IS NULL OR s.parent_id = '')
-		ORDER BY s.time_updated DESC
-	`)
+		  AND (s.parent_id IS NULL OR s.parent_id = '')`
+	var args []interface{}
+	if len(excludeIDs) > 0 {
+		placeholders := make([]string, len(excludeIDs))
+		for i, id := range excludeIDs {
+			placeholders[i] = "?"
+			args = append(args, id)
+		}
+		query += " AND s.id NOT IN (" + strings.Join(placeholders, ",") + ")"
+	}
+	query += " ORDER BY s.time_updated DESC"
+	if limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, limit)
+	}
+
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return fmt.Errorf("query sessions: %w", err)
 	}
@@ -89,11 +115,23 @@ func parseModelID(raw string) string {
 }
 
 func loadFirstUserTexts(db *sql.DB, sessions []Session) error {
+	if len(sessions) == 0 {
+		return nil
+	}
+	// Restrict the scan to the sessions we actually need: the planner can use
+	// message_session_time_created_id_idx instead of scanning every message.
+	placeholders := make([]string, len(sessions))
+	args := make([]interface{}, len(sessions))
+	for i, s := range sessions {
+		placeholders[i] = "?"
+		args[i] = s.ID
+	}
 	rows, err := db.Query(`
 		SELECT session_id, id FROM message
 		WHERE data LIKE '%"role":"user"%'
+		  AND session_id IN (`+strings.Join(placeholders, ",")+`)
 		ORDER BY session_id, time_created
-	`)
+	`, args...)
 	if err != nil {
 		return fmt.Errorf("query user msgs: %w", err)
 	}
@@ -185,6 +223,11 @@ func extractPartText(raw string) string {
 	return p.Text
 }
 
+// LoadAllMessages loads every text part, keyed by session ID.
+//
+// Deliberately one unfiltered sequential scan: scoping by `session_id IN (...)`
+// uses index seeks (random I/O) and measured ~34s cold vs ~13s for this
+// sequential scan on a 3GB db. Do not "optimize" it into per-session batches.
 func LoadAllMessages(dbFile string) (map[string][]string, error) {
 	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
@@ -197,7 +240,6 @@ func LoadAllMessages(dbFile string) (map[string][]string, error) {
 	// ~30% faster than substring LIKE on a 3GB db (fail-fast on first bytes).
 	// Do NOT extend to '{"type":"text","text"' — 170 rows have other key
 	// order after "type" and would be silently dropped.
-	// Guarded by TestPrefixAssumptionHolds.
 	rows, err := db.Query(`
 		SELECT m.session_id, p.data
 		FROM part p

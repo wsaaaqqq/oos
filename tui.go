@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"time"
 
@@ -30,6 +31,8 @@ type model struct {
 	scrollOff     int
 	searchMsgs    bool
 	loadingMsgs   bool
+	sessionsDone  bool
+	msgsDone      bool
 	ready         bool
 	selected      *Session
 	confirmDelete bool
@@ -40,7 +43,15 @@ type model struct {
 	err           error
 }
 
+// initialSessionLimit is how many recent sessions are loaded before the first
+// paint; the rest stream in afterwards (see loadMoreSessionsCmd).
+const initialSessionLimit = 100
+
 type sessionsLoadedMsg struct {
+	sessions []Session
+}
+
+type moreSessionsLoadedMsg struct {
 	sessions []Session
 }
 
@@ -62,7 +73,7 @@ func (m model) Init() tea.Cmd {
 
 func loadSessionsCmd(dbPath string) tea.Cmd {
 	return func() tea.Msg {
-		sessions, err := LoadSessions(dbPath)
+		sessions, err := LoadSessions(dbPath, initialSessionLimit)
 		if err != nil {
 			return dbErrMsg{err}
 		}
@@ -70,7 +81,17 @@ func loadSessionsCmd(dbPath string) tea.Cmd {
 	}
 }
 
-func loadAllMsgsCmd(dbPath string) tea.Cmd {
+func loadMoreSessionsCmd(dbPath string, excludeIDs []string) tea.Cmd {
+	return func() tea.Msg {
+		sessions, err := LoadSessionsExcluding(dbPath, excludeIDs)
+		if err != nil {
+			return dbErrMsg{err}
+		}
+		return moreSessionsLoadedMsg{sessions}
+	}
+}
+
+func loadMsgsCmd(dbPath string) tea.Cmd {
 	return func() tea.Msg {
 		msgs, err := LoadAllMessages(dbPath)
 		if err != nil {
@@ -78,6 +99,36 @@ func loadAllMsgsCmd(dbPath string) tea.Cmd {
 		}
 		return msgsLoadedMsg{msgs}
 	}
+}
+
+func sessionIDs(sessions []Session) []string {
+	ids := make([]string, len(sessions))
+	for i, s := range sessions {
+		ids[i] = s.ID
+	}
+	return ids
+}
+
+// mergeSessions appends new sessions (deduped by ID) and keeps the list
+// ordered by most-recently-updated, which is the display order.
+func mergeSessions(old, add []Session) []Session {
+	seen := make(map[string]bool, len(old))
+	for _, s := range old {
+		seen[s.ID] = true
+	}
+	out := make([]Session, 0, len(old)+len(add))
+	out = append(out, old...)
+	for _, s := range add {
+		if seen[s.ID] {
+			continue
+		}
+		seen[s.ID] = true
+		out = append(out, s)
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].TimeUpdated > out[j].TimeUpdated
+	})
+	return out
 }
 
 func deleteSessionCmd(id string) tea.Cmd {
@@ -129,21 +180,31 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case sessionsLoadedMsg:
+		// stage 1: recent sessions are shown immediately, the rest stream in
 		m.sessions = msg.sessions
 		m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
-		if len(m.filtered) > 0 {
-			m.cursor = 0
-			m.scrollOff = 0
-		}
+		m.cursor = clampCursor(0, len(m.filtered))
+		m.scrollOff = 0
 		m.ready = true
-		if m.searchMsgs && m.allMsgs == nil {
+		m.sessionsDone = false
+		cmds := []tea.Cmd{loadMoreSessionsCmd(m.dbPath, sessionIDs(msg.sessions))}
+		if m.searchMsgs && !m.msgsDone {
 			m.loadingMsgs = true
-			return m, loadAllMsgsCmd(m.dbPath)
+			cmds = append(cmds, loadMsgsCmd(m.dbPath))
 		}
+		return m, tea.Batch(cmds...)
+
+	case moreSessionsLoadedMsg:
+		m.sessions = mergeSessions(m.sessions, msg.sessions)
+		m.sessionsDone = true
+		m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
+		m.cursor = clampCursor(m.cursor, len(m.filtered))
+		m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
 		return m, nil
 
 	case msgsLoadedMsg:
 		m.allMsgs = msg.msgs
+		m.msgsDone = true
 		m.loadingMsgs = false
 		m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
 		m.cursor = clampCursor(m.cursor, len(m.filtered))
@@ -154,6 +215,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg.err
 		m.ready = true
 		m.loadingMsgs = false
+		m.sessionsDone = true
+		m.msgsDone = true
 		return m, nil
 
 	case sessionDeletedMsg:
@@ -163,6 +226,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 		}
+		delete(m.allMsgs, msg.id)
 		m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
 		m.cursor = clampCursor(m.cursor, len(m.filtered))
 		m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
@@ -170,16 +234,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 's' || msg.Runes[0] == 'S') {
-			if !m.loadingMsgs {
-				m.searchMsgs = !m.searchMsgs
-				if m.searchMsgs && m.allMsgs == nil {
-					m.loadingMsgs = true
-					return m, loadAllMsgsCmd(m.dbPath)
-				}
-				m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
-				m.cursor = clampCursor(m.cursor, len(m.filtered))
-				m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
+			m.searchMsgs = !m.searchMsgs
+			if m.searchMsgs && !m.msgsDone {
+				m.loadingMsgs = true
+				return m, loadMsgsCmd(m.dbPath)
 			}
+			m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
+			m.cursor = clampCursor(m.cursor, len(m.filtered))
+			m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
 			return m, nil
 		}
 		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 'q' || msg.Runes[0] == 'Q') {
@@ -293,7 +355,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.textInput, cmd = m.textInput.Update(msg)
 	cmds = append(cmds, cmd)
 
-	if m.ready && !m.loadingMsgs {
+	if m.ready {
 		m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
 		m.cursor = clampCursor(m.cursor, len(m.filtered))
 		m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
@@ -350,7 +412,9 @@ func (m model) renderSearchBar() string {
 	if m.searchMsgs {
 		msgsTag = "msgs ON"
 	}
-	if m.loadingMsgs {
+	if !m.sessionsDone {
+		msgsTag = "sessions ..."
+	} else if m.loadingMsgs {
 		msgsTag = "msgs ..."
 	}
 
@@ -364,7 +428,7 @@ func (m model) renderSearchBar() string {
 		Foreground(lipgloss.Color("240")).
 		Render(" " + msgsTag)
 
-	inputWidth := m.width - 14
+	inputWidth := m.width - 16
 	if inputWidth < 20 {
 		inputWidth = 20
 	}
@@ -375,13 +439,6 @@ func (m model) renderSearchBar() string {
 }
 
 func (m model) renderResults() string {
-	if m.loadingMsgs {
-		return lipgloss.NewStyle().
-			Foreground(lipgloss.Color("243")).
-			Padding(0, 2).
-			Render("Loading messages...")
-	}
-
 	if len(m.filtered) == 0 {
 		return lipgloss.NewStyle().
 			Foreground(lipgloss.Color("243")).
