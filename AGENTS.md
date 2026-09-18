@@ -39,7 +39,7 @@ Sessions with `parent_id IS NOT NULL AND parent_id != ''` are subagent sessions 
 
 User's first question: first `part` row for the first user `message` with `type: "text"`. Stored as `Session.FirstUserMsg` for display and keyword matching.
 
-`LoadAllMessages` queries all text parts across all sessions for MSGS ON mode (~2-5s startup cost).
+`LoadAllMessages` queries all text parts across all sessions and builds the in-memory history index used by every search.
 
 ## Display quirks
 
@@ -64,9 +64,7 @@ ParseKeys() → Filter (Include/Exclude via space-split + '!' prefix)
 FilterSessions() → MatchSession() → sessionContains() OR msgsContain()
 ```
 
-`msgMap()` returns `m.allMsgs` only when `searchMsgs=true`, nil otherwise. This gates whether message history is searched.
-
-MSGS ON is default (`searchMsgs: true` in `initialModel`).
+`msgMap()` returns `m.allMsgs` (the full history index). There is no search-mode toggle: history is always searched once loaded.
 
 ### Staged startup
 
@@ -74,11 +72,11 @@ Startup is staged so the list paints fast:
 
 1. `loadSessionsCmd` → `LoadSessions(db, 100)`: the 100 most recent sessions plus their first user message. Rendered immediately; typing filters right away.
 2. `loadMoreSessionsCmd` → `LoadSessionsExcluding(db, ids)`: the remaining sessions stream in and are merged (`mergeSessions`, deduped by ID, sorted by `time_updated`).
-3. `loadMsgsCmd` → `LoadAllMessages`: full history for MSGS ON, in one sequential scan.
+3. `loadMsgsCmd` → `LoadAllMessages`: full history, in one sequential scan.
 
-The search bar tag shows `sessions ...` → `msgs ...` → `msgs ON` as stages complete; results may grow while loading (expected).
+The search bar tag has exactly two states: `last 100 session loaded` until **both** sessions and history are done, then `all session loaded`. Results may grow while loading (expected).
 
-Filtering is NOT blocked while loading (the old `!loadingMsgs` gate is gone); early keystrokes match only the data loaded so far.
+Filtering is NOT blocked while loading (there is no loading gate); early keystrokes match only the data loaded so far.
 
 Performance gotcha: do **not** turn `LoadAllMessages` into per-session `session_id IN (...)` batches. Scoped queries use index seeks (random I/O) and measured ~34s cold vs ~13s for the single sequential scan on a 3GB db. `loadFirstUserTexts` *does* use `session_id IN (...)` (bounded by the 100-session batch), which is fine.
 

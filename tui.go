@@ -29,8 +29,6 @@ type model struct {
 	filtered      []Session
 	cursor        int
 	scrollOff     int
-	searchMsgs    bool
-	loadingMsgs   bool
 	sessionsDone  bool
 	msgsDone      bool
 	ready         bool
@@ -151,21 +149,17 @@ func initialModel(dbPath string, initialQuery string) model {
 	ti.Width = 60
 
 	return model{
-		textInput:  ti,
-		cursor:     0,
-		scrollOff:  0,
-		searchMsgs: true,
-		dbPath:     dbPath,
-		width:      80,
-		height:     24,
+		textInput: ti,
+		cursor:    0,
+		scrollOff: 0,
+		dbPath:    dbPath,
+		width:     80,
+		height:    24,
 	}
 }
 
 func (m model) msgMap() map[string][]string {
-	if m.searchMsgs {
-		return m.allMsgs
-	}
-	return nil
+	return m.allMsgs
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -188,8 +182,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ready = true
 		m.sessionsDone = false
 		cmds := []tea.Cmd{loadMoreSessionsCmd(m.dbPath, sessionIDs(msg.sessions))}
-		if m.searchMsgs && !m.msgsDone {
-			m.loadingMsgs = true
+		if !m.msgsDone {
 			cmds = append(cmds, loadMsgsCmd(m.dbPath))
 		}
 		return m, tea.Batch(cmds...)
@@ -205,7 +198,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgsLoadedMsg:
 		m.allMsgs = msg.msgs
 		m.msgsDone = true
-		m.loadingMsgs = false
 		m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
 		m.cursor = clampCursor(m.cursor, len(m.filtered))
 		m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
@@ -214,7 +206,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case dbErrMsg:
 		m.err = msg.err
 		m.ready = true
-		m.loadingMsgs = false
 		m.sessionsDone = true
 		m.msgsDone = true
 		return m, nil
@@ -233,17 +224,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 's' || msg.Runes[0] == 'S') {
-			m.searchMsgs = !m.searchMsgs
-			if m.searchMsgs && !m.msgsDone {
-				m.loadingMsgs = true
-				return m, loadMsgsCmd(m.dbPath)
-			}
-			m.filtered = FilterSessions(m.sessions, ParseKeys(m.textInput.Value()), m.msgMap())
-			m.cursor = clampCursor(m.cursor, len(m.filtered))
-			m.scrollOff = calcScrollOff(m.scrollOff, m.cursor, m.visibleSlots())
-			return m, nil
-		}
 		if msg.Alt && len(msg.Runes) > 0 && (msg.Runes[0] == 'q' || msg.Runes[0] == 'Q') {
 			m.confirmDelete = false
 			if m.cursor >= 0 && m.cursor < len(m.filtered) {
@@ -408,14 +388,9 @@ func (m model) View() string {
 }
 
 func (m model) renderSearchBar() string {
-	// right tag: search-mode when toggled off, otherwise loading progress
-	tag := "msgs OFF"
-	if m.searchMsgs {
-		if !m.sessionsDone || m.loadingMsgs {
-			tag = fmt.Sprintf("%d loaded", len(m.sessions))
-		} else {
-			tag = "all loaded"
-		}
+	tag := "all session loaded"
+	if !m.sessionsDone || !m.msgsDone {
+		tag = "last 100 session loaded"
 	}
 
 	searchStyle := lipgloss.NewStyle().
@@ -428,7 +403,8 @@ func (m model) renderSearchBar() string {
 		Foreground(lipgloss.Color("240")).
 		Render(" " + tag)
 
-	inputWidth := m.width - 14
+	// reserve room for the longest tag ("last 100 session loaded", 23 cols)
+	inputWidth := m.width - 26
 	if inputWidth < 20 {
 		inputWidth = 20
 	}

@@ -87,7 +87,6 @@ Type a keyword, see matching sessions from all projects instantly. `↑` / `↓`
 | type keywords | real-time filter, space-separated AND logic, `!key` to exclude |
 | `↑` / `↓` | move selection (`↑` at top deselects) |
 | `Enter` | `cd` to project dir + open session with `opencode -s <id>` in a new tab (the tab stays open after you quit opencode) |
-| `Alt+S` | toggle full-message search (ON by default) |
 | `Ctrl+W` | delete last keyword |
 | `Alt+Q` | copy project directory path to clipboard |
 | `Alt+M` | open live monitor for selected session (no selection = global monitor) |
@@ -102,14 +101,9 @@ Type a keyword, see matching sessions from all projects instantly. `↑` / `↓`
 | Matching message | 56 cols | best match from all messages (keyword-centered), hard-cut at boundary |
 | Timestamp | 11 cols | `HH:MM` (today) or `MM-DD HH:MM` (older) |
 
-## Search Modes
+## Search Scope
 
-| Mode | Scope | Default |
-|---|---|---|
-| **MSGS ON** | title + slug + dir + model + agent + user question + **all message history** | ✅ |
-| MSGS OFF | title + slug + dir + model + agent + user question | — |
-
-Toggle with `Alt+S`. MSGS OFF is faster; MSGS ON searches deep into conversation history.
+Every keyword is matched against the session metadata (title, slug, directory, model, agent, first user question) **and the full message history**. No mode to switch — history is loaded in the background at startup, so the top-right tag shows progress: `last 100 session loaded` → `all session loaded`.
 
 ## Monitor
 
@@ -134,13 +128,16 @@ Open from the main TUI with `Alt+M`: with a selection it monitors that session, 
 
 ## How It Works
 
-Reads `~/.local/share/opencode/opencode.db` (SQLite) — the same database OpenCode uses to store sessions and messages. All filtering happens in-memory after a one-time load at startup.
+Reads `~/.local/share/opencode/opencode.db` (SQLite) — the same database OpenCode uses to store sessions and messages. All filtering happens in-memory.
 
 | Phase | Data | Time |
 |---|---|---|
-| Startup load | 437 sessions + first user messages | ~200ms |
+| Startup (stage 1) | 100 most recent sessions + their first user message | ~1s |
+| Startup (stage 2) | remaining sessions, merged in the background | ~1-3s |
+| History index | all text parts from `part` table, one sequential scan | ~2-15s (cache-dependent) |
 | Per-keystroke filter | in-memory O(n) scan | <1ms |
-| Full-message load (MSGS ON) | all text parts from `part` table | ~2-5s |
+
+Typing works from stage 1 onward; results grow as the remaining stages complete.
 
 ## Tech Stack
 
