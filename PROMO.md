@@ -47,6 +47,19 @@ iwr -useb https://raw.githubusercontent.com/wsaaaqqq/oos/master/install.ps1 | ie
 - SQLite reads `~/.local/share/opencode/opencode.db`
 - In-memory filtering, <1ms per keystroke
 
+## 渠道追踪
+
+| 渠道 | 形式 | 状态 |
+|---|---|---|
+| GitHub 仓库门面 | description / 14 topics / social preview 卡片 | ✅ 已生效 |
+| 掘金 | 文章 | ✅ 已发布 |
+| [awesome-opencode](https://github.com/awesome-opencode/awesome-opencode/pull/722) | YAML 收录 PR | ⏳ OPEN |
+| [OpenCode 官方生态页](https://github.com/anomalyco/opencode/pull/50083) | docs PR（#49537 因缺模板章节被 bot 关，重提） | ⏳ OPEN |
+| [awesome-tuis](https://github.com/rothgar/awesome-tuis/pull/896) | README 收录 PR | ❌ 被 bot 关：仓库首 commit 不满 6 个月，2027-01-16 后 reopen |
+| [opencode.cafe](https://www.opencode.cafe) | Tools 提交（表单） | ⏳ pending 审核 |
+| V2EX | 帖子 | ⛔ 待邀请码 |
+| Reddit / HN / X | 帖子 | ⬜ 未发（草稿在 `promo/`） |
+
 ## License
 
 MIT
