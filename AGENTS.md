@@ -80,6 +80,14 @@ Filtering is NOT blocked while loading (there is no loading gate); early keystro
 
 Performance gotcha: do **not** turn `LoadAllMessages` into per-session `session_id IN (...)` batches. Scoped queries use index seeks (random I/O) and measured ~34s cold vs ~13s for the single sequential scan on a 3GB db. `loadFirstUserTexts` *does* use `session_id IN (...)` (bounded by the 100-session batch), which is fine.
 
+## User question picker (Alt+S)
+
+- Available only with a selected session. `LoadUserQuestions(dbPath, sessionID)` reads all `role=user` messages and non-synthetic/non-ignored text parts from SQLite, newest first; do not use the paginated OpenCode TUI message cache.
+- `questionMode`: 0=closed, 1=question list/filter, 2=action menu. Esc from action menu returns to the list; Esc from list returns to main results.
+- Picker is centered at ~90% of terminal width/height, with 3 columns: sequence, question, timestamp. CJK width/truncation uses `displayWidth`/`truncateCols`/`padCols`.
+- Actions: Enter opens a menu with Fork (OpenCode API `POST /session/:sessionID/fork`; boundary user message is excluded, so restore it to the new TUI input using `/tui/append-prompt`) or Copy question text. `Ctrl+D` anywhere in the picker immediately deletes the whole session.
+- Fork uses a temporary loopback `opencode serve` with generated Basic Auth credentials; `ForkSessionAtMessage` must clean up that server on every path. The new TUI gets its own explicit loopback port and credentials so oos can append the restored prompt without submitting it.
+
 ## Release
 
 Do NOT tag or publish unless the user explicitly says "发版", "发布", "release", or similar.

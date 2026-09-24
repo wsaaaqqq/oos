@@ -18,6 +18,21 @@ func openSessionBg(s Session) error {
 	return cmd.Start()
 }
 
+func startSessionTabWithServer(s Session, port int, username, password string) error {
+	bin, err := exec.LookPath("opencode")
+	if err != nil {
+		return fmt.Errorf("opencode not found: %w", err)
+	}
+	args := []string{"-s", s.ID, "--hostname", "127.0.0.1", "--port", fmt.Sprint(port)}
+	cmd := exec.Command(bin, args...)
+	cmd.Dir = s.Directory
+	cmd.Env = replaceEnv(os.Environ(), map[string]string{
+		"OPENCODE_SERVER_USERNAME": username,
+		"OPENCODE_SERVER_PASSWORD": password,
+	})
+	return cmd.Start()
+}
+
 func spawnMonitor(sessionID string) error {
 	self, err := os.Executable()
 	if err != nil {

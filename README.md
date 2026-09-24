@@ -87,6 +87,7 @@ Type a keyword, see matching sessions from all projects instantly. `↑` / `↓`
 | type keywords | real-time filter, space-separated AND logic, `!key` to exclude |
 | `↑` / `↓` | move selection (`↑` at top deselects) |
 | `Enter` | `cd` to project dir + open session with `opencode -s <id>` in a new tab (the tab stays open after you quit opencode) |
+| `Alt+S` | show all user questions in the selected session |
 | `Ctrl+W` | delete last keyword |
 | `Alt+Q` | copy project directory path to clipboard |
 | `Alt+M` | open live monitor for selected session (no selection = global monitor) |
@@ -104,6 +105,17 @@ Type a keyword, see matching sessions from all projects instantly. `↑` / `↓`
 ## Search Scope
 
 Every keyword is matched against the session metadata (title, slug, directory, model, agent, first user question) **and the full message history**. No mode to switch — history is loaded in the background at startup, so the top-right tag shows progress: `last 100 session loaded` → `all session loaded`.
+
+## User Question Picker
+
+Select a session and press `Alt+S` to open its full user-question list. The centered picker uses about 90% of the terminal, shows question number, text, and time (newest first), and supports keyword filtering.
+
+Select a question and press `Enter` for actions. Press `Ctrl+D` anywhere in the picker to immediately delete the entire session.
+
+- **Fork**: create a branch at that question and open it in a new tab with the question restored in the input box (not submitted).
+- **Copy**: copy the selected question text.
+
+`Esc` backs out of the action menu, then closes the picker to return to oos results.
 
 ## Monitor
 

@@ -22,6 +22,13 @@ type Session struct {
 	FirstUserMsg string
 }
 
+// UserQuestion is one user message in a session, used by the Alt+S picker.
+type UserQuestion struct {
+	ID          string
+	TimeCreated int64
+	Text        string
+}
+
 func dbPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".local", "share", "opencode", "opencode.db")
@@ -223,6 +230,82 @@ func extractPartText(raw string) string {
 	return p.Text
 }
 
+// LoadUserQuestions returns all user messages for a session, newest first.
+// It deliberately queries the full session history instead of relying on the
+// paginated messages currently loaded by the OpenCode TUI.
+func LoadUserQuestions(dbFile, sessionID string) ([]UserQuestion, error) {
+	db, err := sql.Open("sqlite", dbFile)
+	if err != nil {
+		return nil, fmt.Errorf("open db: %w", err)
+	}
+	defer db.Close()
+
+	rows, err := db.Query(`
+		SELECT m.id, m.time_created, m.data, p.data
+		FROM message m
+		LEFT JOIN part p ON p.message_id = m.id
+		  AND p.data LIKE '{"type":"text"%'
+		WHERE m.session_id = ?
+		  AND m.data LIKE '%"role":"user"%'
+		ORDER BY m.time_created DESC, p.time_created ASC
+	`, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("query user questions: %w", err)
+	}
+	defer rows.Close()
+
+	type questionRow struct {
+		question UserQuestion
+		parts    []string
+	}
+	var grouped []questionRow
+	indexByID := make(map[string]int)
+	for rows.Next() {
+		var id, messageData string
+		var created int64
+		var partData sql.NullString
+		if err := rows.Scan(&id, &created, &messageData, &partData); err != nil {
+			continue
+		}
+		var message struct {
+			Role string `json:"role"`
+		}
+		if err := json.Unmarshal([]byte(messageData), &message); err != nil || message.Role != "user" {
+			continue
+		}
+		idx, ok := indexByID[id]
+		if !ok {
+			idx = len(grouped)
+			indexByID[id] = idx
+			grouped = append(grouped, questionRow{question: UserQuestion{ID: id, TimeCreated: created}})
+		}
+		if !partData.Valid {
+			continue
+		}
+		var part struct {
+			Text      string `json:"text"`
+			Synthetic bool   `json:"synthetic"`
+			Ignored   bool   `json:"ignored"`
+		}
+		if err := json.Unmarshal([]byte(partData.String), &part); err == nil && !part.Synthetic && !part.Ignored && strings.TrimSpace(part.Text) != "" {
+			grouped[idx].parts = append(grouped[idx].parts, strings.TrimSpace(part.Text))
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	questions := make([]UserQuestion, 0, len(grouped))
+	for _, row := range grouped {
+		row.question.Text = strings.Join(row.parts, "\n\n")
+		if row.question.Text == "" {
+			row.question.Text = "(no text; may contain attachments)"
+		}
+		questions = append(questions, row.question)
+	}
+	return questions, nil
+}
+
 // LoadAllMessages loads every text part, keyed by session ID.
 //
 // Deliberately one unfiltered sequential scan: scoping by `session_id IN (...)`
@@ -268,14 +351,14 @@ func LoadAllMessages(dbFile string) (map[string][]string, error) {
 
 // MonitorSession is the info + message flow for a single session monitor.
 type MonitorSession struct {
-	ID           string
-	Title        string
-	Agent        string
-	ModelID      string
-	TokensIn     int64
-	TokensOut    int64
-	Cost         float64
-	Messages     []MonitorMessage
+	ID        string
+	Title     string
+	Agent     string
+	ModelID   string
+	TokensIn  int64
+	TokensOut int64
+	Cost      float64
+	Messages  []MonitorMessage
 }
 
 type MonitorMessage struct {

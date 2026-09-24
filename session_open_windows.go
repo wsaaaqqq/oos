@@ -104,6 +104,55 @@ func openSessionBg(s Session) error {
 	return cmd.Start()
 }
 
+func startSessionTabWithServer(s Session, port int, username, password string) error {
+	bin, err := exec.LookPath("opencode")
+	if err != nil {
+		return fmt.Errorf("opencode not found: %w", err)
+	}
+	args := []string{"-s", s.ID, "--hostname", "127.0.0.1", "--port", fmt.Sprint(port)}
+	var shellArgs []string
+	if parentShellName() == "powershell.exe" || parentShellName() == "pwsh.exe" {
+		shell := "powershell"
+		if parentShellName() == "pwsh.exe" {
+			shell = "pwsh"
+		}
+		command := "$env:OPENCODE_SERVER_USERNAME=" + psQuote(username) + "; $env:OPENCODE_SERVER_PASSWORD=" + psQuote(password) + "; & " + psQuote(bin)
+		for _, arg := range args {
+			command += " " + psQuote(arg)
+		}
+		shellArgs = []string{shell, "-NoExit", "-Command", command}
+	} else {
+		command := `set "OPENCODE_SERVER_USERNAME=` + cmdEnvValue(username) + `" && set "OPENCODE_SERVER_PASSWORD=` + cmdEnvValue(password) + `" && ` + cmdQuote(bin)
+		for _, arg := range args {
+			command += " " + cmdQuote(arg)
+		}
+		shellArgs = []string{"cmd", "/k", command}
+	}
+
+	if wt, ok := windowsTerminalPath(); ok {
+		wtArgs := append([]string{"-w", "0", "nt", "-d", s.Directory}, shellArgs...)
+		cmd := exec.Command(wt, wtArgs...)
+		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
+		return cmd.Start()
+	}
+	cmd := exec.Command("cmd", append([]string{"/c", "start", ""}, shellArgs...)...)
+	cmd.Dir = s.Directory
+	return cmd.Start()
+}
+
+func psQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
+}
+
+func cmdEnvValue(value string) string {
+	// Generated credentials use URL-safe base64, so they contain no cmd metacharacters.
+	return strings.ReplaceAll(value, `"`, "")
+}
+
+func cmdQuote(value string) string {
+	return `"` + strings.ReplaceAll(value, `"`, `\"`) + `"`
+}
+
 func spawnMonitor(sessionID string) error {
 	self, err := os.Executable()
 	if err != nil {
